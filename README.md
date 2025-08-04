@@ -1,36 +1,93 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# NeoSlot - Andromeda NFT Marketplace
 
-## Getting Started
+A Next.js frontend for an NFT marketplace built on the Andromeda testnet using CosmWasm smart contracts.
 
-First, run the development server:
+## Features
 
+- Connect to Keplr wallet
+- Browse NFTs for sale on the marketplace
+- Buy NFTs with ANDR tokens
+- View sale status and pricing
+- Responsive design with Tailwind CSS
+
+## Setup
+
+1. Install dependencies:
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+npm install
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+2. Configure environment variables by copying `.env.example` to `.env.local`:
+```bash
+cp .env.example .env.local
+```
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+3. Update the environment variables with your contract addresses and network settings.
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+4. Start the development server:
+```bash
+npm run dev
+```
 
-## Learn More
+## Environment Variables
 
-To learn more about Next.js, take a look at the following resources:
+- `NEXT_PUBLIC_CHAIN_RPC`: Andromeda testnet RPC endpoint
+- `NEXT_PUBLIC_CHAIN_REST`: Andromeda testnet REST endpoint  
+- `NEXT_PUBLIC_CHAIN_ID`: Chain ID (galileo-4 for Andromeda testnet)
+- `NEXT_PUBLIC_CW721_ADDRESS`: NFT contract address
+- `NEXT_PUBLIC_MARKETPLACE_ADDRESS`: Marketplace contract address
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## Marketplace Contract Queries
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+The marketplace contract supports the following queries:
 
-## Deploy on Vercel
+### sale_infos_for_address
+Get all sales for a specific CW721 contract:
+```javascript
+{
+  sale_infos_for_address: { 
+    token_address: "andr1...", // CW721 contract address
+    start_after: null,
+    limit: 50
+  }
+}
+```
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+### sale_state
+Get detailed information about a specific sale:
+```javascript
+{
+  sale_state: { 
+    sale_id: "1" // Sale ID from sale_infos_for_address
+  }
+}
+```
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+### sale_ids
+Get sale IDs for a specific token:
+```javascript
+{
+  sale_ids: { 
+    token_address: "andr1...", // CW721 contract address
+    token_id: "token-name"
+  }
+}
+```
+
+## Sale Status Values
+
+- `open`: NFT is available for purchase
+- `executed`: NFT has been sold
+
+## Technology Stack
+
+- Next.js 15 with TypeScript
+- Tailwind CSS for styling
+- CosmJS for blockchain interaction
+- Keplr wallet integration
+
+## Architecture
+
+- `src/app/page.tsx`: Main marketplace page with wallet connection and NFT display
+- `src/app/components/NFTcard.tsx`: Individual NFT card component
+- `src/app/utils/andrClient.ts`: CosmWasm client utilities with dynamic imports for SSR compatibility
