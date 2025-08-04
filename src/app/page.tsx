@@ -2,72 +2,24 @@
 import { useEffect, useState } from "react";
 import { getQueryClient, getSigningClient } from "./utils/andrClient";
 import NFTCard from "./components/NFTcard";
+import WalletPrompt from "./components/WalletPrompt";
+import { useWallet } from "./hooks/useWallet";
 
 const cw721 = process.env.NEXT_PUBLIC_CW721_ADDRESS!;
 const marketplace = process.env.NEXT_PUBLIC_MARKETPLACE_ADDRESS!;
-const rpc = process.env.NEXT_PUBLIC_CHAIN_RPC!;
-const rest = process.env.NEXT_PUBLIC_CHAIN_REST!;
-const chainId = process.env.NEXT_PUBLIC_CHAIN_ID!;
 
 export default function Home() {
-  const [wallet, setWallet] = useState<any>(null);
-  const [address, setAddress] = useState<string>("");
+  const { address, isConnected } = useWallet();
   const [nfts, setNFTs] = useState<any[]>([]);
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string>("");
 
   // Check if environment variables are set
   useEffect(() => {
-    if (!cw721 || !marketplace || !rpc || !rest || !chainId) {
+    if (!cw721 || !marketplace) {
       setError("Missing environment variables. Please check your .env.local file.");
     }
   }, []);
-
-  const connectWallet = async () => {
-    if (!(window as any).keplr) return alert("Install Keplr!");
-
-    await (window as any).keplr.experimentalSuggestChain({
-      chainId,
-      chainName: "Andromeda Testnet",
-      rpc,
-      rest,
-      bip44: { coinType: 118 },
-      bech32Config: {
-        bech32PrefixAccAddr: "andr",
-        bech32PrefixAccPub: "andrpub",
-        bech32PrefixValAddr: "andrvaloper",
-        bech32PrefixValPub: "andrvaloperpub",
-        bech32PrefixConsAddr: "andrvalcons",
-        bech32PrefixConsPub: "andrvalconspub",
-      },
-      currencies: [
-        {
-          coinDenom: "ANDR",
-          coinMinimalDenom: "uandr",
-          coinDecimals: 6,
-        },
-      ],
-      feeCurrencies: [
-        {
-          coinDenom: "ANDR",
-          coinMinimalDenom: "uandr",
-          coinDecimals: 6,
-        },
-      ],
-      stakeCurrency: {
-        coinDenom: "ANDR",
-        coinMinimalDenom: "uandr",
-        coinDecimals: 6,
-      },
-      features: ["stargate", "ibc-transfer"],
-    });
-
-    await (window as any).keplr.enable(chainId);
-    const offlineSigner = (window as any).keplr.getOfflineSigner(chainId);
-    const accounts = await offlineSigner.getAccounts();
-    setWallet(offlineSigner);
-    setAddress(accounts[0].address);
-  };
 
   const fetchNFTs = async () => {
     // Only run on client side
@@ -77,6 +29,7 @@ export default function Home() {
       setLoading(true);
       setError("");
       
+      const rpc = process.env.NEXT_PUBLIC_CHAIN_RPC!;
       const client = await getQueryClient(rpc);
 
       // Get all sales for our CW721 contract using sale_infos_for_address
@@ -140,13 +93,25 @@ export default function Home() {
   };
 
   const buyNFT = async (saleId: string, price: string) => {
-    if (!wallet || !address || typeof window === 'undefined') return;
+    if (!isConnected || typeof window === 'undefined') return;
 
     try {
       setLoading(true);
       setError("");
 
-      const signingClient = await getSigningClient(rpc, wallet);
+      const rpc = process.env.NEXT_PUBLIC_CHAIN_RPC!;
+      const chainId = process.env.NEXT_PUBLIC_CHAIN_ID!;
+      
+      // Get wallet signer
+      if (!window.keplr) {
+        alert('Please install Keplr extension');
+        return;
+      }
+
+      await window.keplr.enable(chainId);
+      const offlineSigner = window.keplr.getOfflineSigner(chainId);
+      
+      const signingClient = await getSigningClient(rpc, offlineSigner);
 
       const result = await signingClient.execute(
         address,
@@ -174,7 +139,7 @@ export default function Home() {
 
   useEffect(() => {
     // Only run on client side
-    if (typeof window !== 'undefined' && !error && cw721 && marketplace && rpc && rest && chainId) {
+    if (typeof window !== 'undefined' && !error && cw721 && marketplace) {
       fetchNFTs();
     }
   }, []);
@@ -192,14 +157,11 @@ export default function Home() {
         </div>
       )}
 
-      {!address ? (
-        <button 
-          onClick={connectWallet}
-          className="px-6 py-3 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors disabled:opacity-50"
-          disabled={loading}
-        >
-          Connect Wallet
-        </button>
+      {!isConnected ? (
+        <WalletPrompt 
+          title="Welcome to NeoSlot Marketplace"
+          message="Connect your Keplr wallet to discover, collect, and trade unique NFTs on the Andromeda blockchain"
+        />
       ) : (
         <p className="text-green-600 font-medium">Connected: {address}</p>
       )}
