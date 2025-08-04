@@ -4,11 +4,35 @@ A Next.js frontend for an NFT marketplace built on the Andromeda testnet using C
 
 ## Features
 
-- Connect to Keplr wallet
-- Browse NFTs for sale on the marketplace
-- Buy NFTs with ANDR tokens
-- View sale status and pricing
-- Responsive design with Tailwind CSS
+- **🔗 Wallet Integration**: Connect to Keplr wallet
+- **🖼️ Browse NFTs**: View NFTs for sale on the marketplace with detailed cards
+- **💰 Buy NFTs**: Purchase NFTs with ANDR tokens
+- **🎨 Mint NFTs**: Create and mint new NFTs with metadata and attributes
+- **📋 List for Sale**: Automatically list newly minted NFTs on the marketplace
+- **📄 NFT Details**: View detailed NFT information including metadata, attributes, and sale history
+- **🎯 Responsive Design**: Mobile-friendly interface with Tailwind CSS
+
+## Pages
+
+### 🏠 Marketplace (`/`)
+- Browse all available NFTs
+- Connect wallet functionality
+- Quick buy options
+- Navigate to detailed NFT views
+
+### 🎨 Mint NFT (`/mint`)
+- Create new NFTs with custom metadata
+- Add images, descriptions, and attributes
+- Set sale price
+- Automatically mint, approve, and list for sale
+
+### 📄 NFT Details (`/nft/[tokenId]`)
+- Detailed NFT information
+- Large image display
+- Complete metadata and attributes
+- Sale information and status
+- Purchase functionality
+- Technical details (Token URI, etc.)
 
 ## Setup
 
@@ -37,11 +61,17 @@ npm run dev
 - `NEXT_PUBLIC_CW721_ADDRESS`: NFT contract address
 - `NEXT_PUBLIC_MARKETPLACE_ADDRESS`: Marketplace contract address
 
-## Marketplace Contract Queries
+## Smart Contract Integration
 
-The marketplace contract supports the following queries:
+### NFT Minting Process
 
-### sale_infos_for_address
+1. **Mint NFT**: Create NFT with metadata on CW721 contract
+2. **Approve Marketplace**: Allow marketplace to transfer the NFT
+3. **Start Sale**: List the NFT for sale with specified price
+
+### Marketplace Contract Queries
+
+#### sale_infos_for_address
 Get all sales for a specific CW721 contract:
 ```javascript
 {
@@ -53,7 +83,7 @@ Get all sales for a specific CW721 contract:
 }
 ```
 
-### sale_state
+#### sale_state
 Get detailed information about a specific sale:
 ```javascript
 {
@@ -63,7 +93,7 @@ Get detailed information about a specific sale:
 }
 ```
 
-### sale_ids
+#### sale_ids
 Get sale IDs for a specific token:
 ```javascript
 {
@@ -74,6 +104,42 @@ Get sale IDs for a specific token:
 }
 ```
 
+### CW721 Contract Queries
+
+#### nft_info
+Get NFT metadata:
+```javascript
+{
+  nft_info: { 
+    token_id: "token-name"
+  }
+}
+```
+
+#### owner_of
+Get NFT owner:
+```javascript
+{
+  owner_of: { 
+    token_id: "token-name"
+  }
+}
+```
+
+## NFT Metadata Structure
+
+```typescript
+interface NFTMetadata {
+  name: string;
+  description: string;
+  image: string;
+  attributes: Array<{
+    trait_type: string;
+    value: string;
+  }>;
+}
+```
+
 ## Sale Status Values
 
 - `open`: NFT is available for purchase
@@ -81,13 +147,34 @@ Get sale IDs for a specific token:
 
 ## Technology Stack
 
-- Next.js 15 with TypeScript
-- Tailwind CSS for styling
-- CosmJS for blockchain interaction
-- Keplr wallet integration
+- **Frontend**: Next.js 15 with TypeScript
+- **Styling**: Tailwind CSS for responsive design
+- **Blockchain**: CosmJS for CosmWasm interaction
+- **Wallet**: Keplr wallet integration
+- **Network**: Andromeda Protocol (galileo-4 testnet)
 
 ## Architecture
 
-- `src/app/page.tsx`: Main marketplace page with wallet connection and NFT display
-- `src/app/components/NFTcard.tsx`: Individual NFT card component
-- `src/app/utils/andrClient.ts`: CosmWasm client utilities with dynamic imports for SSR compatibility
+- `src/app/page.tsx`: Main marketplace page with wallet connection and NFT grid
+- `src/app/mint/page.tsx`: NFT minting form with metadata input
+- `src/app/nft/[tokenId]/page.tsx`: Detailed NFT view page
+- `src/app/components/NFTcard.tsx`: Reusable NFT card component
+- `src/app/utils/andrClient.ts`: CosmWasm client utilities with SSR compatibility
+- `src/types/keplr.d.ts`: TypeScript declarations for Keplr wallet
+
+## User Workflow
+
+1. **Connect Wallet**: Users connect their Keplr wallet
+2. **Browse Marketplace**: View available NFTs in a grid layout
+3. **View Details**: Click on NFTs to see detailed information
+4. **Purchase NFTs**: Buy NFTs directly from detail or card view
+5. **Mint New NFTs**: Create new NFTs with custom metadata
+6. **Automatic Listing**: Newly minted NFTs are automatically listed for sale
+
+## Development Notes
+
+- Uses dynamic imports for CosmWasm clients to ensure SSR compatibility
+- Implements proper error handling and loading states
+- Responsive design works on mobile and desktop
+- TypeScript support with proper type declarations
+- Environment-based configuration for different networks

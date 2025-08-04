@@ -180,8 +180,11 @@ export default function Home() {
   }, []);
 
   return (
-    <div className="p-10 max-w-4xl mx-auto">
-      <h1 className="text-3xl font-bold mb-6">🧠 Your NFT Marketplace</h1>
+    <div className="p-10 max-w-6xl mx-auto">
+      <div className="mb-8">
+        <h1 className="text-4xl font-bold text-white">Welcome to NeoSlot Marketplace</h1>
+        <p className="text-white mt-2">Discover, collect, and trade unique NFTs on the Andromeda blockchain</p>
+      </div>
 
       {error && (
         <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
