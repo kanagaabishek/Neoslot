@@ -9,8 +9,12 @@ export const getQueryClient = async (rpcUrl: string) => {
 export const getSigningClient = async (rpcUrl: string, wallet: any) => {
   // Dynamic import to avoid SSR issues
   const { SigningCosmWasmClient } = await import("@cosmjs/cosmwasm-stargate");
+  const { GasPrice } = await import("@cosmjs/stargate");
+  const gasPrice = GasPrice.fromString("0.025uandr");
+  
   return await SigningCosmWasmClient.connectWithSigner(
     rpcUrl,
-    wallet
+    wallet,
+    { gasPrice }
   );
 };

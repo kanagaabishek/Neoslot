@@ -62,7 +62,7 @@ const NFTCard: React.FC<NFTCardProps> = ({
 
   return (
     <div 
-      className="border rounded-lg px-6 shadow bg-white mb-4 cursor-pointer hover:shadow-lg transition-shadow"
+      className="border rounded-lg p-4 shadow bg-white mb-4 cursor-pointer hover:shadow-lg transition-shadow"
       onClick={handleCardClick}
     >
       {/* Placeholder for NFT image */}

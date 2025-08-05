@@ -3,12 +3,12 @@
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { getQueryClient, getSigningClient } from '../utils/andrClient';
+import WalletPrompt from '../components/WalletPrompt';
+import { useWallet } from '../hooks/useWallet';
 
 // Environment variables
 const cw721 = process.env.NEXT_PUBLIC_CW721_ADDRESS!;
 const marketplace = process.env.NEXT_PUBLIC_MARKETPLACE_ADDRESS!;
-const rpc = process.env.NEXT_PUBLIC_CHAIN_RPC!;
-const chainId = process.env.NEXT_PUBLIC_CHAIN_ID!;
 
 interface UserNFT {
   tokenId: string;
@@ -34,8 +34,7 @@ interface UserStats {
 
 export default function ProfilePage() {
   const router = useRouter();
-  const [wallet, setWallet] = useState<any>(null);
-  const [address, setAddress] = useState("");
+  const { address, isConnected } = useWallet();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [userNFTs, setUserNFTs] = useState<UserNFT[]>([]);
@@ -47,34 +46,14 @@ export default function ProfilePage() {
   });
   const [activeTab, setActiveTab] = useState<'owned' | 'listed' | 'sold'>('owned');
 
-  const connectWallet = async () => {
-    if (typeof window === 'undefined') return;
-    
-    try {
-      if (!window.keplr) {
-        throw new Error("Keplr wallet not found");
-      }
-
-      await window.keplr.enable(chainId);
-      const offlineSigner = window.keplr.getOfflineSigner(chainId);
-      const accounts = await offlineSigner.getAccounts();
-      
-      setWallet(offlineSigner);
-      setAddress(accounts[0].address);
-      setError("");
-    } catch (err) {
-      console.error("Error connecting wallet:", err);
-      setError("Failed to connect wallet. Please install Keplr and try again.");
-    }
-  };
-
   const fetchUserNFTs = async () => {
-    if (!address || typeof window === 'undefined') return;
+    if (!isConnected || !address || typeof window === 'undefined') return;
     
     try {
       setLoading(true);
       setError("");
       
+      const rpc = process.env.NEXT_PUBLIC_CHAIN_RPC!;
       const client = await getQueryClient(rpc);
 
       // Get all tokens owned by user
@@ -218,34 +197,12 @@ export default function ProfilePage() {
     router.push(`/nft/${tokenId}`);
   };
 
-  if (!address) {
+  if (!isConnected) {
     return (
-      <div className="py-20 flex items-center justify-center">
-        <div className="text-center max-w-md mx-auto px-4">
-          <div className="bg-white rounded-lg shadow-lg p-8">
-            <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
-              <svg className="w-8 h-8 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-              </svg>
-            </div>
-            <h1 className="text-2xl font-bold text-gray-900 mb-4">Connect Your Wallet</h1>
-            <p className="text-gray-600 mb-6">
-              Connect your wallet to view your profile and NFT collection.
-            </p>
-            <button
-              onClick={connectWallet}
-              className="w-full px-6 py-3 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors"
-            >
-              Connect Wallet
-            </button>
-            {error && (
-              <div className="mt-4 p-3 bg-red-50 border border-red-200 rounded-lg">
-                <p className="text-red-600 text-sm">{error}</p>
-              </div>
-            )}
-          </div>
-        </div>
-      </div>
+      <WalletPrompt 
+        title="Your Profile"
+        message="Connect your wallet to view your profile and NFT collection."
+      />
     );
   }
 

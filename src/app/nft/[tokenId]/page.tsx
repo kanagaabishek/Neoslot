@@ -3,12 +3,11 @@
 import React, { useState, useEffect } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import { getQueryClient, getSigningClient } from '../../utils/andrClient';
+import { useWallet } from '../../hooks/useWallet';
 
 // Environment variables
 const cw721 = process.env.NEXT_PUBLIC_CW721_ADDRESS!;
 const marketplace = process.env.NEXT_PUBLIC_MARKETPLACE_ADDRESS!;
-const rpc = process.env.NEXT_PUBLIC_CHAIN_RPC!;
-const chainId = process.env.NEXT_PUBLIC_CHAIN_ID!;
 
 interface NFTMetadata {
   name?: string;
@@ -38,35 +37,11 @@ export default function NFTDetailPage() {
   const router = useRouter();
   const params = useParams();
   const tokenId = params.tokenId as string;
+  const { address, isConnected, connectWallet } = useWallet();
   
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [nftDetails, setNftDetails] = useState<NFTDetails | null>(null);
-  
-  // Wallet state
-  const [wallet, setWallet] = useState<any>(null);
-  const [address, setAddress] = useState("");
-
-  const connectWallet = async () => {
-    if (typeof window === 'undefined') return;
-    
-    try {
-      if (!window.keplr) {
-        throw new Error("Keplr wallet not found");
-      }
-
-      await window.keplr.enable(chainId);
-      const offlineSigner = window.keplr.getOfflineSigner(chainId);
-      const accounts = await offlineSigner.getAccounts();
-      
-      setWallet(offlineSigner);
-      setAddress(accounts[0].address);
-      setError("");
-    } catch (err) {
-      console.error("Error connecting wallet:", err);
-      setError("Failed to connect wallet. Please install Keplr and try again.");
-    }
-  };
 
   const fetchNFTDetails = async () => {
     if (typeof window === 'undefined') return;
@@ -75,6 +50,7 @@ export default function NFTDetailPage() {
       setLoading(true);
       setError("");
       
+      const rpc = process.env.NEXT_PUBLIC_CHAIN_RPC!;
       const client = await getQueryClient(rpc);
 
       // Get NFT info from CW721 contract
@@ -145,7 +121,7 @@ export default function NFTDetailPage() {
         owner: ownerInfo.owner,
         metadata,
         tokenUri: tokenInfo.token_uri,
-        saleInfo
+        saleInfo: saleInfo || undefined
       });
 
     } catch (err) {
@@ -157,13 +133,25 @@ export default function NFTDetailPage() {
   };
 
   const buyNFT = async () => {
-    if (!wallet || !address || !nftDetails?.saleInfo) return;
+    if (!isConnected || !address || !nftDetails?.saleInfo) return;
 
     try {
       setLoading(true);
       setError("");
 
-      const signingClient = await getSigningClient(rpc, wallet);
+      const rpc = process.env.NEXT_PUBLIC_CHAIN_RPC!;
+      const chainId = process.env.NEXT_PUBLIC_CHAIN_ID!;
+      
+      // Get wallet signer
+      if (!window.keplr) {
+        alert('Please install Keplr extension');
+        return;
+      }
+
+      await window.keplr.enable(chainId);
+      const offlineSigner = window.keplr.getOfflineSigner(chainId);
+      
+      const signingClient = await getSigningClient(rpc, offlineSigner);
 
       const result = await signingClient.execute(
         address,
@@ -255,8 +243,7 @@ export default function NFTDetailPage() {
   return (
     <div className="py-8">
       <div className="max-w-6xl mx-auto px-4">
-
-        <div className="bg-white rounded-lg shadow-lg overflow-hidden">
+        <div className="bg-white rounded-lg shadow-lg overflow-hidden px-3">
           <div className="md:flex">
             {/* Image Section */}
             <div className="md:w-1/2">

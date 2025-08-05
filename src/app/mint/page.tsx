@@ -3,12 +3,12 @@
 import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { getSigningClient } from '../utils/andrClient';
+import WalletPrompt from '../components/WalletPrompt';
+import { useWallet } from '../hooks/useWallet';
 
 // Environment variables
 const cw721 = process.env.NEXT_PUBLIC_CW721_ADDRESS!;
 const marketplace = process.env.NEXT_PUBLIC_MARKETPLACE_ADDRESS!;
-const rpc = process.env.NEXT_PUBLIC_CHAIN_RPC!;
-const chainId = process.env.NEXT_PUBLIC_CHAIN_ID!;
 
 interface NFTMetadata {
   name: string;
@@ -22,6 +22,7 @@ interface NFTMetadata {
 
 export default function MintPage() {
   const router = useRouter();
+  const { address, isConnected } = useWallet();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
@@ -33,31 +34,6 @@ export default function MintPage() {
   const [imageUrl, setImageUrl] = useState("");
   const [price, setPrice] = useState("");
   const [attributes, setAttributes] = useState([{ trait_type: "", value: "" }]);
-  
-  // Wallet state
-  const [wallet, setWallet] = useState<any>(null);
-  const [address, setAddress] = useState("");
-
-  const connectWallet = async () => {
-    if (typeof window === 'undefined') return;
-    
-    try {
-      if (!window.keplr) {
-        throw new Error("Keplr wallet not found");
-      }
-
-      await window.keplr.enable(chainId);
-      const offlineSigner = window.keplr.getOfflineSigner(chainId);
-      const accounts = await offlineSigner.getAccounts();
-      
-      setWallet(offlineSigner);
-      setAddress(accounts[0].address);
-      setError("");
-    } catch (err) {
-      console.error("Error connecting wallet:", err);
-      setError("Failed to connect wallet. Please install Keplr and try again.");
-    }
-  };
 
   const addAttribute = () => {
     setAttributes([...attributes, { trait_type: "", value: "" }]);
@@ -74,7 +50,7 @@ export default function MintPage() {
   };
 
   const mintNFT = async () => {
-    if (!wallet || !address || typeof window === 'undefined') {
+    if (!isConnected || typeof window === 'undefined') {
       setError("Please connect your wallet first");
       return;
     }
@@ -89,7 +65,34 @@ export default function MintPage() {
       setError("");
       setSuccess("");
 
-      const signingClient = await getSigningClient(rpc, wallet);
+      const rpc = process.env.NEXT_PUBLIC_CHAIN_RPC!;
+      const chainId = process.env.NEXT_PUBLIC_CHAIN_ID!;
+      
+      // Get wallet signer
+      if (!window.keplr) {
+        throw new Error("Keplr wallet not found");
+      }
+
+      await window.keplr.enable(chainId);
+      const offlineSigner = window.keplr.getOfflineSigner(chainId);
+      
+      const signingClient = await getSigningClient(rpc, offlineSigner);
+
+      // Let's try to query the contract info first to understand the schema
+      try {
+        const contractInfo = await signingClient.queryContractSmart(cw721, { contract_info: {} });
+        console.log("Contract info:", contractInfo);
+      } catch (queryErr) {
+        console.log("Could not query contract info:", queryErr);
+      }
+
+      // Try querying config
+      try {
+        const config = await signingClient.queryContractSmart(cw721, { config: {} });
+        console.log("Contract config:", config);
+      } catch (queryErr) {
+        console.log("Could not query config:", queryErr);
+      }
 
       // Prepare metadata
       const metadata: NFTMetadata = {
@@ -99,7 +102,7 @@ export default function MintPage() {
         attributes: attributes.filter(attr => attr.trait_type && attr.value)
       };
 
-      // Step 1: Mint the NFT
+      // Step 1: Mint the NFT using simplified Andromeda ADO format
       console.log("Minting NFT...");
       const mintResult = await signingClient.execute(
         address,
@@ -108,8 +111,10 @@ export default function MintPage() {
           mint: {
             token_id: tokenId,
             owner: address,
-            token_uri: JSON.stringify(metadata), // Store metadata as token_uri
-            extension: metadata
+            token_uri: JSON.stringify(metadata),
+            extension: {
+              publisher: address
+            }
           }
         },
         "auto"
@@ -195,17 +200,11 @@ export default function MintPage() {
             </div>
           )}
 
-          {!address ? (
-            <div className="text-center py-8">
-              <p className="mb-4 text-gray-600">Connect your wallet to mint NFTs</p>
-              <button 
-                onClick={connectWallet}
-                className="px-6 py-3 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors disabled:opacity-50"
-                disabled={loading}
-              >
-                Connect Wallet
-              </button>
-            </div>
+          {!isConnected ? (
+            <WalletPrompt 
+              title="Mint Your NFT"
+              message="Connect your Keplr wallet to start minting unique NFTs on the Andromeda blockchain"
+            />
           ) : (
             <div>
               <p className="mb-6 text-green-600 font-medium">Connected: {address}</p>
@@ -213,14 +212,14 @@ export default function MintPage() {
               <form className="space-y-6" onSubmit={(e) => { e.preventDefault(); mintNFT(); }}>
                 {/* Token ID */}
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                  <label className="block text-sm text-black font-medium mb-2">
                     Token ID *
                   </label>
                   <input
                     type="text"
                     value={tokenId}
                     onChange={(e) => setTokenId(e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    className="w-full px-3 py-2 border text-gray-700 border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                     placeholder="e.g., my-nft-001"
                     required
                   />
@@ -235,7 +234,7 @@ export default function MintPage() {
                     type="text"
                     value={name}
                     onChange={(e) => setName(e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    className="w-full px-3 py-2 border border-gray-300 text-gray-700 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                     placeholder="e.g., My Awesome NFT"
                     required
                   />
@@ -243,14 +242,14 @@ export default function MintPage() {
 
                 {/* Description */}
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                  <label className="block text-sm font-medium text-black mb-2">
                     Description *
                   </label>
                   <textarea
                     value={description}
                     onChange={(e) => setDescription(e.target.value)}
                     rows={4}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    className="w-full px-3 py-2 border border-gray-300 text-gray-700 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                     placeholder="Describe your NFT..."
                     required
                   />
