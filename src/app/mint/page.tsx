@@ -1,11 +1,12 @@
 "use client"
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { getSigningClient } from '../utils/andrClient';
 import WalletPrompt from '../components/WalletPrompt';
 import NetworkStatus from '../components/NetworkStatus';
 import DebugPanel from '../components/DebugPanel';
+import MarketplaceViewer from '../components/MarketplaceViewer';
 import { useWallet } from '../hooks/useWallet';
 
 // Environment variables
@@ -49,6 +50,26 @@ export default function MintPage() {
   const [imageUrl, setImageUrl] = useState("");
   const [price, setPrice] = useState("");
   const [attributes, setAttributes] = useState([{ trait_type: "", value: "" }]);
+
+  // Generate a unique token ID when component mounts
+  useEffect(() => {
+    if (!tokenId) {
+      const uniqueId = `nft-${Date.now()}-${Math.random().toString(36).substr(2, 5)}`;
+      setTokenId(uniqueId);
+    }
+  }, []);
+
+  // Helper function to populate with sample data for testing
+  const populateSampleData = () => {
+    setName("Sample NFT");
+    setDescription("This is a sample NFT created for testing purposes");
+    setImageUrl("https://via.placeholder.com/400x400/0066cc/ffffff?text=Sample+NFT");
+    setPrice("1.0");
+    setAttributes([
+      { trait_type: "Color", value: "Blue" },
+      { trait_type: "Rarity", value: "Common" }
+    ]);
+  };
 
   const addAttribute = () => {
     setAttributes([...attributes, { trait_type: "", value: "" }]);
@@ -118,13 +139,13 @@ export default function MintPage() {
           mint: {
             token_id: tokenId,
             owner: address,
-            token_uri: JSON.stringify(metadata)
+            token_uri: JSON.stringify(metadata),
+            extension: {
+              publisher: address
+            }
           }
         },
-        {
-          amount: [{ denom: "uandr", amount: "1000000" }],
-          gas: "500000"
-        }
+        "auto" // Use auto gas estimation instead of manual fees
       );
 
       console.log("NFT minted successfully:", mintResult);
@@ -253,190 +274,89 @@ export default function MintPage() {
 
       console.log("Prepared metadata:", metadata);
 
-      // Step 1: Mint the NFT - try different message formats
+      // Step 1: Mint the NFT
       console.log("Attempting to mint NFT...");
       addDebugLog("🎯 Starting NFT mint process...");
-      let mintResult;
       
-      try {
-        addDebugLog("Trying standard CW721 mint format...");
-        // Try standard CW721 mint format first
-        mintResult = await signingClient.execute(
-          address,
-          cw721,
-          {
-            mint: {
-              token_id: tokenId,
-              owner: address,
-              token_uri: JSON.stringify(metadata)
-            }
-          },
-          {
-            amount: [{ denom: "uandr", amount: "1000000" }], // 1 ANDR gas fee
-            gas: "500000"
-          }
-        );
-        addDebugLog("✅ Standard CW721 mint successful!");
-      } catch (mintErr1) {
-        console.log("First mint format failed, trying Andromeda ADO format:", mintErr1);
-        addDebugLog(`❌ Standard format failed: ${mintErr1 instanceof Error ? mintErr1.message : String(mintErr1)}`);
-        
-        try {
-          addDebugLog("Trying Andromeda ADO format with extension...");
-          // Try Andromeda ADO format
-          mintResult = await signingClient.execute(
-            address,
-            cw721,
-            {
-              mint: {
-                token_id: tokenId,
-                owner: address,
-                token_uri: JSON.stringify(metadata),
-                extension: {
-                  publisher: address
-                }
-              }
-            },
-            {
-              amount: [{ denom: "uandr", amount: "1000000" }],
-              gas: "500000"
-            }
-          );
-          addDebugLog("✅ Andromeda ADO format successful!");
-        } catch (mintErr2) {
-          console.log("Second mint format failed, trying without extension:", mintErr2);
-          addDebugLog(`❌ ADO format failed: ${mintErr2 instanceof Error ? mintErr2.message : String(mintErr2)}`);
-          
-          addDebugLog("Trying simplified format without extension...");
-          // Try without extension
-          mintResult = await signingClient.execute(
-            address,
-            cw721,
-            {
-              mint: {
-                token_id: tokenId,
-                owner: address,
-                token_uri: JSON.stringify(metadata)
-              }
-            },
-            {
-              amount: [{ denom: "uandr", amount: "1000000" }],
-              gas: "500000"
-            }
-          );
-          addDebugLog("✅ Simplified format successful!");
-        }
-      }
-
-      console.log("NFT minted successfully:", mintResult);
-
-      // Step 2: Approve marketplace to transfer the NFT
-      console.log("Approving marketplace...");
-      addDebugLog("🔐 Approving marketplace for NFT transfer...");
-      const approveResult = await signingClient.execute(
+      addDebugLog("Using Andromeda ADO CW721 mint format with extension...");
+      const mintResult = await signingClient.execute(
         address,
         cw721,
         {
-          approve: {
-            spender: marketplace,
-            token_id: tokenId
+          mint: {
+            token_id: tokenId,
+            owner: address,
+            token_uri: JSON.stringify(metadata),
+            extension: {
+              publisher: address
+            }
           }
         },
-        {
-          amount: [{ denom: "uandr", amount: "500000" }],
-          gas: "300000"
-        }
+        "auto" // Use auto gas estimation
       );
 
-      console.log("Marketplace approved:", approveResult);
-      addDebugLog("✅ Marketplace approval successful!");
+      console.log("NFT minted successfully:", mintResult);
+      addDebugLog("✅ NFT minted successfully!");
+      
+      // Wait a moment for the transaction to be processed
+      addDebugLog("Waiting for mint transaction to be processed...");
+      await new Promise(resolve => setTimeout(resolve, 2000));
 
-      // Step 3: List the NFT for sale on the marketplace
+      // Step 2: List the NFT for sale on the marketplace using send_nft
       console.log("Listing NFT for sale...");
-      addDebugLog("🏪 Listing NFT on marketplace...");
+      addDebugLog("🏪 Listing NFT on marketplace using send_nft...");
       const priceInMicroAndr = (parseFloat(price) * 1_000_000).toString();
       addDebugLog(`Price: ${price} ANDR = ${priceInMicroAndr} uandr`);
       
-      // Try Andromeda marketplace format
-      let listResult;
-      try {
-        addDebugLog("Trying start_sale format...");
-        listResult = await signingClient.execute(
-          address,
-          marketplace,
-          {
-            start_sale: {
-              token_id: tokenId,
-              token_address: cw721,
-              price: {
-                amount: priceInMicroAndr,
-                denom: "uandr"
-              },
-              start_time: { at_time: (Date.now() * 1000000).toString() },
-              duration: null
-            }
+      // Prepare the marketplace message according to Andromeda documentation
+      const marketplaceMsg = {
+        start_sale: {
+          price: priceInMicroAndr,
+          coin_denom: {
+            native_token: "uandr"
           },
-          {
-            amount: [{ denom: "uandr", amount: "500000" }],
-            gas: "300000"
+          recipient: {
+            address: address  // Seller's address to receive proceeds
           }
-        );
-        addDebugLog("✅ start_sale format successful!");
-      } catch (listErr1) {
-        console.log("First marketplace format failed, trying alternative format:", listErr1);
-        addDebugLog(`❌ start_sale failed: ${listErr1 instanceof Error ? listErr1.message : String(listErr1)}`);
-        
-        try {
-          addDebugLog("Trying simplified start_sale format...");
-          // Try alternative format without duration
-          listResult = await signingClient.execute(
-            address,
-            marketplace,
-            {
-              start_sale: {
-                token_id: tokenId,
-                token_address: cw721,
-                price: {
-                  amount: priceInMicroAndr,
-                  denom: "uandr"
-                }
-              }
-            },
-            {
-              amount: [{ denom: "uandr", amount: "500000" }],
-              gas: "300000"
-            }
-          );
-          addDebugLog("✅ Simplified start_sale successful!");
-        } catch (listErr2) {
-          console.log("Second marketplace format failed, trying simple format:", listErr2);
-          addDebugLog(`❌ Simplified start_sale failed: ${listErr2 instanceof Error ? listErr2.message : String(listErr2)}`);
-          
-          addDebugLog("Trying list_nft format...");
-          // Try even simpler format
-          listResult = await signingClient.execute(
-            address,
-            marketplace,
-            {
-              list_nft: {
-                token_id: tokenId,
-                contract_address: cw721,
-                price: priceInMicroAndr,
-                denom: "uandr"
-              }
-            },
-            {
-              amount: [{ denom: "uandr", amount: "500000" }],
-              gas: "300000"
-            }
-          );
-          addDebugLog("✅ list_nft format successful!");
         }
-      }
+      };
+      
+      // Encode the message as base64
+      const encodedMsg = btoa(JSON.stringify(marketplaceMsg));
+      addDebugLog(`Marketplace message: ${JSON.stringify(marketplaceMsg)}`);
+      addDebugLog(`Encoded message: ${encodedMsg}`);
+      
+      // Send the NFT to the marketplace with the encoded message
+      addDebugLog("Sending NFT to marketplace...");
+      const listResult = await signingClient.execute(
+        address,
+        cw721,
+        {
+          send_nft: {
+            contract: marketplace,
+            token_id: tokenId,
+            msg: encodedMsg
+          }
+        },
+        "auto"
+      );
 
-      console.log("NFT listed for sale:", listResult);
-      addDebugLog("🎉 NFT successfully minted and listed!");
-      setSuccess(`NFT "${name}" minted and listed successfully! Token ID: ${tokenId}`);
+      console.log("NFT sent to marketplace:", listResult);
+      addDebugLog("✅ NFT successfully sent to marketplace!");
+      
+      // Wait a moment for the listing to be processed, then verify
+      addDebugLog("Waiting for listing transaction to be processed...");
+      await new Promise(resolve => setTimeout(resolve, 3000));
+
+      // Verify the NFT listing on marketplace
+      const isListed = await verifyMarketplaceListing(tokenId, signingClient);
+      if (isListed) {
+        addDebugLog("🎉 NFT successfully minted and listed!");
+        setSuccess(`NFT "${name}" minted and listed successfully! Token ID: ${tokenId}`);
+      } else {
+        addDebugLog("⚠️ NFT minting succeeded, but listing verification failed.");
+        setSuccess(`NFT "${name}" minted successfully! Token ID: ${tokenId}. Listing verification failed - please check marketplace manually.`);
+      }
       
       // Reset form
       setTokenId("");
@@ -474,6 +394,82 @@ export default function MintPage() {
     }
   };
 
+  const verifyMarketplaceListing = async (tokenId: string, signingClient: any) => {
+    try {
+      addDebugLog("🔍 Verifying NFT listing on marketplace...");
+      
+      // Try multiple verification approaches
+      
+      // Approach 1: Query sale_ids for this specific token
+      try {
+        const saleIds = await signingClient.queryContractSmart(marketplace, {
+          sale_ids: {
+            token_address: cw721,
+            token_id: tokenId
+          }
+        });
+        
+        if (saleIds.sale_ids && saleIds.sale_ids.length > 0) {
+          addDebugLog(`✅ NFT is listed with sale ID: ${saleIds.sale_ids[0]}`);
+          
+          // Get the sale state details
+          const saleState = await signingClient.queryContractSmart(marketplace, {
+            sale_state: { sale_id: saleIds.sale_ids[0] }
+          });
+          
+          addDebugLog(`Sale details: Price=${saleState.price} ${saleState.coin_denom}, Status=${saleState.status}`);
+          return true;
+        }
+      } catch (err) {
+        addDebugLog(`Could not query sale_ids: ${err instanceof Error ? err.message : String(err)}`);
+      }
+      
+      // Approach 2: Query latest sale state for this token
+      try {
+        const latestSale = await signingClient.queryContractSmart(marketplace, {
+          latest_sale_state: {
+            token_address: cw721,
+            token_id: tokenId
+          }
+        });
+        
+        addDebugLog(`✅ Found latest sale: Price=${latestSale.price}, Status=${latestSale.status}`);
+        return true;
+      } catch (err) {
+        addDebugLog(`Could not query latest_sale_state: ${err instanceof Error ? err.message : String(err)}`);
+      }
+      
+      // Approach 3: Check if we can find the sale in sale_infos_for_address
+      try {
+        const saleInfos = await signingClient.queryContractSmart(marketplace, {
+          sale_infos_for_address: {
+            token_address: cw721,
+            start_after: null,
+            limit: 50
+          }
+        });
+        
+        const foundSale = saleInfos.find((info: any) => 
+          info.sale_ids && info.sale_ids.length > 0
+        );
+        
+        if (foundSale) {
+          addDebugLog(`✅ Found sale in sale_infos_for_address`);
+          return true;
+        }
+      } catch (err) {
+        addDebugLog(`Could not query sale_infos_for_address: ${err instanceof Error ? err.message : String(err)}`);
+      }
+      
+      addDebugLog("⚠️ Could not verify NFT listing - it may take a moment to appear");
+      return false;
+      
+    } catch (err) {
+      addDebugLog(`❌ Error during verification: ${err instanceof Error ? err.message : String(err)}`);
+      return false;
+    }
+  };
+
   return (
     <div className="py-8">
       <div className="max-w-2xl mx-auto px-4">
@@ -481,6 +477,13 @@ export default function MintPage() {
           <div className="mb-6">
             <h1 className="text-3xl font-bold text-gray-900">Create Your NFT</h1>
             <p className="text-gray-600 mt-2">Fill in the details below to mint your NFT and list it on the marketplace</p>
+            <button
+              type="button"
+              onClick={populateSampleData}
+              className="mt-2 text-sm text-blue-600 hover:text-blue-800 underline"
+            >
+              📝 Fill with sample data for testing
+            </button>
           </div>
 
           {/* Network Status */}
@@ -640,6 +643,16 @@ export default function MintPage() {
                 </div>
 
                 {/* Submit Buttons */}
+                <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4">
+                  <h4 className="font-medium text-blue-900 mb-2">💡 Transaction Tips:</h4>
+                  <ul className="text-sm text-blue-800 space-y-1">
+                    <li>• "Mint NFT Only" requires 1 Keplr transaction approval (safe to test)</li>
+                    <li>• "Mint & List NFT" requires 2 Keplr transaction approvals (mint → send_nft to marketplace)</li>
+                    <li>• Try "Mint NFT Only" first to test if minting works</li>
+                    <li>• Each transaction window will appear sequentially - approve them all</li>
+                  </ul>
+                </div>
+                
                 <div className="flex gap-4">
                   <button
                     type="button"
@@ -662,6 +675,13 @@ export default function MintPage() {
           )}
         </div>
       </div>
+      
+      {/* Marketplace Viewer */}
+      <MarketplaceViewer 
+        rpcUrl={process.env.NEXT_PUBLIC_CHAIN_RPC!}
+        marketplaceAddress={marketplace}
+        cw721Address={cw721}
+      />
       
       {/* Debug Panel */}
       <DebugPanel 
