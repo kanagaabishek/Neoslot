@@ -14,6 +14,7 @@
     "@cosmjs/proto-signing": "^0.34.0",
     "@cosmjs/stargate": "^0.34.0",
     "cosmjs-types": "^0.10.1",
+    "dotenv": "^17.2.1",
     "next": "15.4.5",
     "react": "19.1.0",
     "react-dom": "19.1.0"
