@@ -247,12 +247,12 @@ export default function NFTDetailPage() {
           <div className="md:flex">
             {/* Image Section */}
             <div className="md:w-1/2">
-              <div className="aspect-square">
+              <div className="aspect-square py-3zf items-center justify-center flex">
                 {nftDetails.metadata?.image ? (
                   <img
                     src={nftDetails.metadata.image}
                     alt={nftDetails.metadata.name || `NFT ${tokenId}`}
-                    className="w-full h-full object-cover"
+                    className="w-100 h-100 object-cover rounded-lg"
                   />
                 ) : (
                   <div className="w-full h-full bg-gray-200 flex items-center justify-center">
@@ -373,7 +373,17 @@ export default function NFTDetailPage() {
                   <div className="bg-gray-50 p-4 rounded-lg">
                     <h4 className="text-sm font-medium text-gray-700 mb-2">Token URI</h4>
                     <pre className="text-xs text-gray-600 whitespace-pre-wrap break-all">
-                      {nftDetails.tokenUri}
+                      {nftDetails.metadata?.name}
+                    </pre>
+                    <pre className="text-xs text-gray-600 whitespace-pre-wrap break-all">
+                      {nftDetails.metadata?.description}
+                    </pre>
+                    <pre className="text-xs text-gray-600 whitespace-pre-wrap break-all">
+                      {/* {nftDetails.metadata?.attributes
+                        ? JSON.stringify(nftDetails.metadata.attributes, null, 2)
+                        : "Welcome........"} */}
+                        Welcome to course!
+                      
                     </pre>
                   </div>
                 </div>
