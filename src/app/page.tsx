@@ -145,14 +145,14 @@ export default function Home() {
   }, []);
 
   return (
-    <div className="p-10 max-w-6xl mx-auto">
-      <div className="mb-8">
-        <h1 className="text-4xl font-bold">Welcome to NeoSlot Marketplace</h1>
-        <p className="mt-2">Discover, collect, and trade unique NFTs on the Andromeda blockchain</p>
+    <div className="px-4 py-8 sm:px-6 sm:py-12 lg:py-16 max-w-6xl mx-auto">
+      <div className="mb-12 sm:mb-16 text-center">
+        <h1 className="text-3xl sm:text-4xl lg:text-6xl font-bold text-black mb-4 sm:mb-6">Welcome to NeoSlot Marketplace</h1>
+        <p className="text-gray-600 text-base sm:text-lg max-w-2xl mx-auto px-4">Discover, collect, and trade unique NFTs on the Andromeda blockchain</p>
       </div>
 
       {error && (
-        <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg mb-4">
+        <div className="bg-gray-50 border border-gray-300 text-black px-4 sm:px-6 py-4 rounded-xl mb-6 sm:mb-8">
           {error}
         </div>
       )}
@@ -163,27 +163,29 @@ export default function Home() {
           message="Connect your Keplr wallet to discover, collect, and trade unique NFTs on the Andromeda blockchain"
         />
       ) : (
-        <p className="text-emerald-600 font-medium">Connected: {address}</p>
+        <div className="bg-gray-50 border border-gray-200 px-4 py-3 rounded-lg mb-6 sm:mb-8">
+          <p className="text-black font-medium text-sm sm:text-base">Connected: {address}</p>
+        </div>
       )}
 
-      <div className="mt-8">
+      <div className="mt-8 sm:mt-12 lg:mt-16">
         {loading ? (
-          <div className="flex items-center justify-center py-12">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-            <p className="text-blue-600 ml-3">Loading NFTs...</p>
+          <div className="flex flex-col sm:flex-row items-center justify-center py-16 sm:py-24">
+            <div className="animate-spin rounded-full h-10 w-10 sm:h-12 sm:w-12 border-b-2 border-black mb-4 sm:mb-0"></div>
+            <p className="text-black ml-0 sm:ml-4 font-medium text-center">Loading NFTs...</p>
           </div>
         ) : nfts.length === 0 ? (
-          <div className="text-center py-12">
-            <div className="text-slate-400 mb-4">
-              <svg className="w-16 h-16 mx-auto" fill="currentColor" viewBox="0 0 20 20">
+          <div className="text-center py-16 sm:py-24">
+            <div className="text-gray-400 mb-6">
+              <svg className="w-16 h-16 sm:w-20 sm:h-20 mx-auto" fill="currentColor" viewBox="0 0 20 20">
                 <path fillRule="evenodd" d="M4 3a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V5a2 2 0 00-2-2H4zm12 12H4l4-8 3 6 2-4 3 6z" clipRule="evenodd" />
               </svg>
             </div>
-            <p className="text-slate-500 text-lg">No NFTs found in the marketplace</p>
-            <p className="text-slate-400 text-sm mt-2">Be the first to mint and list your NFT!</p>
+            <p className="text-black text-lg sm:text-xl font-medium mb-2">No NFTs found in the marketplace</p>
+            <p className="text-gray-600 text-sm">Be the first to mint and list your NFT!</p>
           </div>
         ) : (
-          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+          <div className="grid gap-6 sm:gap-8 sm:grid-cols-2 lg:grid-cols-3">
             {nfts.map((nft) => (
               <NFTCard
                 key={nft.saleId}

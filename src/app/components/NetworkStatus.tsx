@@ -33,10 +33,10 @@ export default function NetworkStatus({ rpcUrl }: NetworkStatusProps) {
 
   const getStatusColor = () => {
     switch (status) {
-      case 'connected': return 'text-green-600 bg-green-50';
-      case 'disconnected': return 'text-red-600 bg-red-50';
-      case 'checking': return 'text-yellow-600 bg-yellow-50';
-      default: return 'text-gray-600 bg-gray-50';
+      case 'connected': return 'text-black bg-gray-50 border-gray-200';
+      case 'disconnected': return 'text-black bg-gray-100 border-gray-300';
+      case 'checking': return 'text-gray-600 bg-gray-50 border-gray-200';
+      default: return 'text-gray-600 bg-gray-50 border-gray-200';
     }
   };
 
@@ -55,7 +55,7 @@ export default function NetworkStatus({ rpcUrl }: NetworkStatusProps) {
         <span className="text-sm font-medium">{getStatusText()}</span>
         <button
           onClick={checkConnectivity}
-          className="text-xs px-2 py-1 rounded hover:bg-opacity-50 bg-current bg-opacity-10"
+          className="text-xs px-2 py-1 rounded hover:bg-opacity-50 bg-current bg-opacity-10 transition-colors"
           disabled={status === 'checking'}
         >
           Refresh

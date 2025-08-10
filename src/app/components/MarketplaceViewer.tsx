@@ -63,37 +63,37 @@ export default function MarketplaceViewer({ rpcUrl, marketplaceAddress, cw721Add
   return (
     <div className="bg-white rounded-xl shadow-lg p-6 mt-6 border border-slate-200">
       <div className="flex items-center justify-between mb-4">
-        <h2 className="text-xl font-bold text-slate-900">Marketplace Listings</h2>
+        <h2 className="text-xl font-bold text-black">Marketplace Listings</h2>
         <button
           onClick={loadSales}
           disabled={loading}
-          className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 transition-colors font-medium"
+          className="px-4 py-2 bg-black text-white rounded-lg hover:bg-gray-800 disabled:opacity-50 transition-colors font-medium"
         >
           {loading ? "Loading..." : "Refresh"}
         </button>
       </div>
 
       {error && (
-        <div className="mb-4 p-4 bg-red-50 border border-red-200 rounded-lg">
-          <p className="text-red-600">{error}</p>
+        <div className="mb-4 p-4 bg-gray-50 border border-gray-300 rounded-lg">
+          <p className="text-black">{error}</p>
         </div>
       )}
 
       {sales.length === 0 && !loading && !error && (
-        <div className="text-slate-500 text-center py-4">
+        <div className="text-gray-600 text-center py-4">
           No sales found in marketplace
         </div>
       )}
 
       <div className="space-y-4">
         {sales.map((sale) => (
-          <div key={sale.sale_id} className="border border-slate-200 rounded-lg p-4">
+          <div key={sale.sale_id} className="border border-gray-200 rounded-lg p-4">
             <div className="flex items-center justify-between mb-2">
-              <span className="font-medium text-slate-900">Sale ID: {sale.sale_id}</span>
+              <span className="font-medium text-black">Sale ID: {sale.sale_id}</span>
               <span className={`px-2 py-1 rounded text-xs ${
-                sale.status === 'open' ? 'bg-emerald-50 text-emerald-700' : 
-                sale.status === 'executed' ? 'bg-slate-100 text-slate-700' :
-                'bg-amber-50 text-amber-700'
+                sale.status === 'open' ? 'bg-gray-100 text-black' : 
+                sale.status === 'executed' ? 'bg-gray-200 text-gray-700' :
+                'bg-gray-50 text-gray-600'
               }`}>
                 {sale.status}
               </span>

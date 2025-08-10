@@ -24,23 +24,23 @@ const WalletPrompt: React.FC<WalletPromptProps> = ({
   }
 
   return (
-    <div className={`flex items-center justify-center py-20 ${className}`}>
-      <div className="text-center max-w-md mx-auto px-4">
-        <div className="bg-white rounded-lg shadow-lg p-8 border border-gray-200">
+    <div className={`flex items-center justify-center py-16 sm:py-24 lg:py-32 ${className}`}>
+      <div className="text-center max-w-md mx-auto px-4 sm:px-6">
+        <div className="bg-white rounded-xl border border-gray-200 p-6 sm:p-8 lg:p-12">
           {/* Icon */}
-          <div className="mb-6">
-            <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto">
-              <span className="text-2xl">🔗</span>
+          <div className="mb-6 sm:mb-8">
+            <div className="w-16 h-16 sm:w-20 sm:h-20 bg-gray-100 rounded-full flex items-center justify-center mx-auto">
+              <span className="text-2xl sm:text-3xl">🔗</span>
             </div>
           </div>
 
           {/* Title */}
-          <h2 className="text-2xl font-bold text-gray-900 mb-4">
+          <h2 className="text-2xl sm:text-3xl font-bold text-black mb-4 sm:mb-6">
             {title}
           </h2>
 
           {/* Message */}
-          <p className="text-gray-600 mb-8 leading-relaxed">
+          <p className="text-gray-600 mb-8 sm:mb-10 leading-relaxed text-sm sm:text-base">
             {message}
           </p>
 
@@ -48,11 +48,11 @@ const WalletPrompt: React.FC<WalletPromptProps> = ({
           <button
             onClick={connectWallet}
             disabled={isConnecting}
-            className="w-full px-6 py-3 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center space-x-2"
+            className="w-full px-6 sm:px-8 py-3 sm:py-4 bg-black text-white rounded-lg hover:bg-gray-800 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center space-x-3 font-medium text-sm sm:text-base"
           >
             {isConnecting ? (
               <>
-                <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
+                <div className="animate-spin rounded-full h-4 w-4 sm:h-5 sm:w-5 border-b-2 border-white"></div>
                 <span>Connecting...</span>
               </>
             ) : (
@@ -64,13 +64,13 @@ const WalletPrompt: React.FC<WalletPromptProps> = ({
           </button>
 
           {/* Help Text */}
-          <p className="text-sm text-gray-500 mt-4">
+          <p className="text-xs sm:text-sm text-gray-500 mt-4 sm:mt-6">
             Don't have Keplr?{' '}
             <a
               href="https://www.keplr.app/"
               target="_blank"
               rel="noopener noreferrer"
-              className="text-blue-500 hover:text-blue-600 underline"
+              className="text-black hover:underline font-medium"
             >
               Install it here
             </a>
