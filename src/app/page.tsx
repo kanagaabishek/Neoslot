@@ -147,12 +147,12 @@ export default function Home() {
   return (
     <div className="p-10 max-w-6xl mx-auto">
       <div className="mb-8">
-        <h1 className="text-4xl font-bold text-white">Welcome to NeoSlot Marketplace</h1>
-        <p className="text-white mt-2">Discover, collect, and trade unique NFTs on the Andromeda blockchain</p>
+        <h1 className="text-4xl font-bold">Welcome to NeoSlot Marketplace</h1>
+        <p className="mt-2">Discover, collect, and trade unique NFTs on the Andromeda blockchain</p>
       </div>
 
       {error && (
-        <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
+        <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg mb-4">
           {error}
         </div>
       )}
@@ -163,16 +163,27 @@ export default function Home() {
           message="Connect your Keplr wallet to discover, collect, and trade unique NFTs on the Andromeda blockchain"
         />
       ) : (
-        <p className="text-green-600 font-medium">Connected: {address}</p>
+        <p className="text-emerald-600 font-medium">Connected: {address}</p>
       )}
 
       <div className="mt-8">
         {loading ? (
-          <p className="text-blue-500">Loading...</p>
+          <div className="flex items-center justify-center py-12">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+            <p className="text-blue-600 ml-3">Loading NFTs...</p>
+          </div>
         ) : nfts.length === 0 ? (
-          <p className="text-gray-500">No NFTs found.</p>
+          <div className="text-center py-12">
+            <div className="text-slate-400 mb-4">
+              <svg className="w-16 h-16 mx-auto" fill="currentColor" viewBox="0 0 20 20">
+                <path fillRule="evenodd" d="M4 3a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V5a2 2 0 00-2-2H4zm12 12H4l4-8 3 6 2-4 3 6z" clipRule="evenodd" />
+              </svg>
+            </div>
+            <p className="text-slate-500 text-lg">No NFTs found in the marketplace</p>
+            <p className="text-slate-400 text-sm mt-2">Be the first to mint and list your NFT!</p>
+          </div>
         ) : (
-          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
             {nfts.map((nft) => (
               <NFTCard
                 key={nft.saleId}

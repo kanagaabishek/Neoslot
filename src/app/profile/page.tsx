@@ -210,10 +210,10 @@ export default function ProfilePage() {
     <div className="py-8">
       <div className="max-w-7xl mx-auto px-4">
         {/* Profile Header */}
-        <div className="bg-white rounded-lg shadow-lg p-6 mb-8">
+        <div className="bg-white rounded-xl shadow-lg p-6 mb-8 border border-slate-200">
           <div className="flex items-start space-x-6">
             {/* Avatar */}
-            <div className="w-24 h-24 bg-gradient-to-br from-blue-400 to-purple-500 rounded-full flex items-center justify-center">
+            <div className="w-24 h-24 bg-gradient-to-br from-blue-500 to-blue-700 rounded-full flex items-center justify-center">
               <span className="text-2xl font-bold text-white">
                 {address.slice(4, 6).toUpperCase()}
               </span>
@@ -221,17 +221,17 @@ export default function ProfilePage() {
             
             {/* User Info */}
             <div className="flex-1">
-              <h1 className="text-2xl font-bold text-gray-900 mb-2">My Profile</h1>
+              <h1 className="text-2xl font-bold text-slate-900 mb-2">My Profile</h1>
               <div className="space-y-2">
                 <div>
-                  <span className="text-sm text-gray-600">Wallet Address:</span>
-                  <p className="font-mono text-sm bg-gray-100 p-2 rounded mt-1 break-all">
+                  <span className="text-sm text-slate-600">Wallet Address:</span>
+                  <p className="font-mono text-sm bg-slate-100 p-2 rounded mt-1 break-all">
                     {address}
                   </p>
                 </div>
                 <div>
-                  <span className="text-sm text-gray-600">Chain:</span>
-                  <span className="ml-2 px-2 py-1 bg-blue-100 text-blue-800 text-xs font-medium rounded">
+                  <span className="text-sm text-slate-600">Chain:</span>
+                  <span className="ml-2 px-2 py-1 bg-blue-50 text-blue-700 text-xs font-medium rounded">
                     Andromeda Testnet
                   </span>
                 </div>
@@ -242,11 +242,11 @@ export default function ProfilePage() {
             <button
               onClick={fetchUserNFTs}
               disabled={loading}
-              className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors disabled:opacity-50"
+              className="px-4 py-2 bg-slate-100 text-slate-700 rounded-lg hover:bg-slate-200 transition-colors disabled:opacity-50"
             >
               {loading ? (
                 <div className="flex items-center space-x-2">
-                  <div className="animate-spin w-4 h-4 border-2 border-gray-400 border-t-transparent rounded-full"></div>
+                  <div className="animate-spin w-4 h-4 border-2 border-slate-400 border-t-transparent rounded-full"></div>
                   <span>Refreshing...</span>
                 </div>
               ) : (
@@ -263,58 +263,58 @@ export default function ProfilePage() {
 
         {/* Stats Cards */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
-          <div className="bg-white rounded-lg shadow p-6">
+          <div className="bg-white rounded-xl shadow-sm p-6 border border-slate-200">
             <div className="flex items-center">
-              <div className="p-2 bg-blue-100 rounded-lg">
+              <div className="p-2 bg-blue-50 rounded-lg">
                 <svg className="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
                 </svg>
               </div>
               <div className="ml-4">
-                <p className="text-sm font-medium text-gray-600">Total NFTs</p>
-                <p className="text-2xl font-bold text-gray-900">{userStats.totalNFTs}</p>
+                <p className="text-sm font-medium text-slate-600">Total NFTs</p>
+                <p className="text-2xl font-bold text-slate-900">{userStats.totalNFTs}</p>
               </div>
             </div>
           </div>
 
-          <div className="bg-white rounded-lg shadow p-6">
+          <div className="bg-white rounded-xl shadow-sm p-6 border border-slate-200">
             <div className="flex items-center">
-              <div className="p-2 bg-green-100 rounded-lg">
-                <svg className="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <div className="p-2 bg-emerald-50 rounded-lg">
+                <svg className="w-6 h-6 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
                 </svg>
               </div>
               <div className="ml-4">
-                <p className="text-sm font-medium text-gray-600">Listed for Sale</p>
-                <p className="text-2xl font-bold text-gray-900">{userStats.listedNFTs}</p>
+                <p className="text-sm font-medium text-slate-600">Listed for Sale</p>
+                <p className="text-2xl font-bold text-slate-900">{userStats.listedNFTs}</p>
               </div>
             </div>
           </div>
 
-          <div className="bg-white rounded-lg shadow p-6">
+          <div className="bg-white rounded-xl shadow-sm p-6 border border-slate-200">
             <div className="flex items-center">
-              <div className="p-2 bg-purple-100 rounded-lg">
+              <div className="p-2 bg-purple-50 rounded-lg">
                 <svg className="w-6 h-6 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z" />
                 </svg>
               </div>
               <div className="ml-4">
-                <p className="text-sm font-medium text-gray-600">Sold NFTs</p>
-                <p className="text-2xl font-bold text-gray-900">{userStats.soldNFTs}</p>
+                <p className="text-sm font-medium text-slate-600">Sold NFTs</p>
+                <p className="text-2xl font-bold text-slate-900">{userStats.soldNFTs}</p>
               </div>
             </div>
           </div>
 
-          <div className="bg-white rounded-lg shadow p-6">
+          <div className="bg-white rounded-xl shadow-sm p-6 border border-slate-200">
             <div className="flex items-center">
-              <div className="p-2 bg-yellow-100 rounded-lg">
-                <svg className="w-6 h-6 text-yellow-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <div className="p-2 bg-amber-50 rounded-lg">
+                <svg className="w-6 h-6 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1" />
                 </svg>
               </div>
               <div className="ml-4">
-                <p className="text-sm font-medium text-gray-600">Total Earnings</p>
-                <p className="text-2xl font-bold text-gray-900">
+                <p className="text-sm font-medium text-slate-600">Total Earnings</p>
+                <p className="text-2xl font-bold text-slate-900">
                   {formatPrice(userStats.totalEarnings)}
                 </p>
               </div>
@@ -323,15 +323,15 @@ export default function ProfilePage() {
         </div>
 
         {/* Tab Navigation */}
-        <div className="bg-white rounded-lg shadow mb-8">
-          <div className="border-b border-gray-200">
+        <div className="bg-white rounded-xl shadow-sm mb-8 border border-slate-200">
+          <div className="border-b border-slate-200">
             <nav className="flex space-x-8 px-6">
               <button
                 onClick={() => setActiveTab('owned')}
                 className={`py-4 px-1 border-b-2 font-medium text-sm ${
                   activeTab === 'owned'
                     ? 'border-blue-500 text-blue-600'
-                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                    : 'border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300'
                 }`}
               >
                 All NFTs ({userStats.totalNFTs})
