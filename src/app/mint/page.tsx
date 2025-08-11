@@ -471,16 +471,16 @@ export default function MintPage() {
   };
 
   return (
-    <div className="py-8">
-      <div className="max-w-2xl mx-auto px-4">
-        <div className="bg-white rounded-lg shadow-lg p-6">
-          <div className="mb-6">
-            <h1 className="text-3xl font-bold text-gray-900">Create Your NFT</h1>
-            <p className="text-gray-600 mt-2">Fill in the details below to mint your NFT and list it on the marketplace</p>
+    <div className="py-8 sm:py-12 lg:py-16">
+      <div className="max-w-2xl mx-auto px-4 sm:px-6">
+        <div className="bg-white rounded-xl border border-gray-200 p-6 sm:p-8 lg:p-12">
+          <div className="mb-8 sm:mb-12">
+            <h1 className="text-3xl sm:text-4xl font-bold text-black mb-4">Create Your NFT</h1>
+            <p className="text-gray-600 text-base sm:text-lg">Fill in the details below to mint your NFT and list it on the marketplace</p>
             <button
               type="button"
               onClick={populateSampleData}
-              className="mt-2 text-sm text-blue-600 hover:text-blue-800 underline"
+              className="mt-4 text-sm text-black hover:underline font-medium"
             >
               📝 Fill with sample data for testing
             </button>
@@ -492,14 +492,14 @@ export default function MintPage() {
           </div>
 
           {error && (
-            <div className="mb-4 p-4 bg-red-50 border border-red-200 rounded-lg">
-              <p className="text-red-600">{error}</p>
+            <div className="mb-6 p-4 bg-gray-50 border border-gray-300 rounded-lg">
+              <p className="text-black">{error}</p>
             </div>
           )}
 
           {success && (
-            <div className="mb-4 p-4 bg-green-50 border border-green-200 rounded-lg">
-              <p className="text-green-600">{success}</p>
+            <div className="mb-6 p-4 bg-gray-50 border border-gray-300 rounded-lg">
+              <p className="text-black">{success}</p>
             </div>
           )}
 
@@ -510,19 +510,19 @@ export default function MintPage() {
             />
           ) : (
             <div>
-              <p className="mb-6 text-green-600 font-medium">Connected: {address}</p>
+              <p className="mb-8 text-black font-medium">Connected: {address}</p>
               
-              <form className="space-y-6" onSubmit={(e) => { e.preventDefault(); mintNFT(); }}>
+              <form className="space-y-8" onSubmit={(e) => { e.preventDefault(); mintNFT(); }}>
                 {/* Token ID */}
                 <div>
-                  <label className="block text-sm text-black font-medium mb-2">
+                  <label className="block text-sm font-medium text-black mb-3">
                     Token ID *
                   </label>
                   <input
                     type="text"
                     value={tokenId}
                     onChange={(e) => setTokenId(e.target.value)}
-                    className="w-full px-3 py-2 border text-gray-700 border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-black focus:border-black text-black"
                     placeholder="e.g., my-nft-001"
                     required
                   />
@@ -530,14 +530,14 @@ export default function MintPage() {
 
                 {/* Name */}
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                  <label className="block text-sm font-medium text-black mb-2">
                     NFT Name *
                   </label>
                   <input
                     type="text"
                     value={name}
                     onChange={(e) => setName(e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 text-gray-700 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    className="w-full px-3 py-2 border border-gray-300 text-black rounded-lg focus:ring-2 focus:ring-gray-400 focus:border-gray-400"
                     placeholder="e.g., My Awesome NFT"
                     required
                   />
@@ -552,7 +552,7 @@ export default function MintPage() {
                     value={description}
                     onChange={(e) => setDescription(e.target.value)}
                     rows={4}
-                    className="w-full px-3 py-2 border border-gray-300 text-gray-700 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    className="w-full px-3 py-2 border border-gray-300 text-black rounded-lg focus:ring-2 focus:ring-gray-400 focus:border-gray-400"
                     placeholder="Describe your NFT..."
                     required
                   />
@@ -560,14 +560,14 @@ export default function MintPage() {
 
                 {/* Image URL */}
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                  <label className="block text-sm font-medium text-slate-900 mb-2">
                     Image URL *
                   </label>
                   <input
                     type="url"
                     value={imageUrl}
                     onChange={(e) => setImageUrl(e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-gray-400 focus:border-gray-400"
                     placeholder="https://example.com/image.jpg"
                     required
                   />
@@ -576,7 +576,7 @@ export default function MintPage() {
                       <img 
                         src={imageUrl} 
                         alt="Preview" 
-                        className="w-32 h-32 object-cover rounded-lg border"
+                        className="w-32 h-32 object-cover rounded-lg border border-slate-200"
                         onError={() => setError("Invalid image URL")}
                       />
                     </div>
@@ -585,7 +585,7 @@ export default function MintPage() {
 
                 {/* Price */}
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                  <label className="block text-sm font-medium text-black mb-2">
                     Sale Price (ANDR) *
                   </label>
                   <input
@@ -594,58 +594,58 @@ export default function MintPage() {
                     min="0"
                     value={price}
                     onChange={(e) => setPrice(e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-gray-400 focus:border-gray-400"
                     placeholder="10.0"
                   />
-                  <p className="text-sm text-gray-500 mt-1">
+                  <p className="text-sm text-gray-600 mt-1">
                     Price in ANDR tokens (required only for "Mint & List" button)
                   </p>
                 </div>
 
                 {/* Attributes */}
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                  <label className="block text-sm font-medium text-black mb-2">
                     Attributes (Optional)
                   </label>
                   {attributes.map((attr, index) => (
-                    <div key={index} className="flex gap-2 mb-2">
+                    <div key={index} className="flex flex-col sm:flex-row gap-2 mb-3 sm:mb-2">
                       <input
                         type="text"
                         value={attr.trait_type}
                         onChange={(e) => updateAttribute(index, 'trait_type', e.target.value)}
-                        className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                        className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-gray-400 focus:border-gray-400"
                         placeholder="Trait type (e.g., Color)"
                       />
                       <input
                         type="text"
                         value={attr.value}
                         onChange={(e) => updateAttribute(index, 'value', e.target.value)}
-                        className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                        className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-gray-400 focus:border-gray-400"
                         placeholder="Value (e.g., Blue)"
                       />
                       <button
                         type="button"
                         onClick={() => removeAttribute(index)}
-                        className="px-3 py-2 text-red-600 hover:bg-red-50 rounded-lg"
+                        className="w-full sm:w-auto px-3 py-2 text-black hover:bg-gray-100 rounded-lg text-sm font-medium border border-gray-300"
                         disabled={attributes.length === 1}
                       >
-                        Remove
+                        ✕
                       </button>
                     </div>
                   ))}
                   <button
                     type="button"
                     onClick={addAttribute}
-                    className="text-blue-600 hover:text-blue-800 text-sm"
+                    className="text-black hover:text-gray-700 text-sm"
                   >
                     + Add Attribute
                   </button>
                 </div>
 
                 {/* Submit Buttons */}
-                <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4">
-                  <h4 className="font-medium text-blue-900 mb-2">💡 Transaction Tips:</h4>
-                  <ul className="text-sm text-blue-800 space-y-1">
+                <div className="bg-gray-50 border border-gray-200 rounded-lg p-4 mb-4">
+                  <h4 className="font-medium text-black mb-2">💡 Transaction Tips:</h4>
+                  <ul className="text-sm text-gray-700 space-y-1">
                     <li>• "Mint NFT Only" requires 1 Keplr transaction approval (safe to test)</li>
                     <li>• "Mint & List NFT" requires 2 Keplr transaction approvals (mint → send_nft to marketplace)</li>
                     <li>• Try "Mint NFT Only" first to test if minting works</li>
@@ -653,19 +653,19 @@ export default function MintPage() {
                   </ul>
                 </div>
                 
-                <div className="flex gap-4">
+                <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 pt-4">
                   <button
                     type="button"
                     onClick={mintNFTOnly}
                     disabled={loading}
-                    className="flex-1 px-6 py-3 bg-green-500 text-white rounded-lg hover:bg-green-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="w-full sm:flex-1 px-6 sm:px-8 py-3 sm:py-4 bg-white border border-black text-black rounded-lg hover:bg-gray-50 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed font-medium"
                   >
                     {loading ? "Minting..." : "Mint NFT Only"}
                   </button>
                   <button
                     type="submit"
                     disabled={loading}
-                    className="flex-1 px-6 py-3 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="w-full sm:flex-1 px-6 sm:px-8 py-3 sm:py-4 bg-black text-white rounded-lg hover:bg-gray-800 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed font-medium"
                   >
                     {loading ? "Minting & Listing..." : "Mint & List NFT"}
                   </button>

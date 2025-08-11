@@ -37,7 +37,7 @@ export default function NFTDetailPage() {
   const router = useRouter();
   const params = useParams();
   const tokenId = params.tokenId as string;
-  const { address, isConnected, connectWallet } = useWallet();
+  const { address, isConnected, connectWallet,formatAddress,disconnectWallet } = useWallet();
   
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -196,8 +196,8 @@ export default function NFTDetailPage() {
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case 'executed': return 'text-red-600 bg-red-50';
-      case 'open': return 'text-green-600 bg-green-50';
+      case 'executed': return 'text-gray-700 bg-gray-100';
+      case 'open': return 'text-black bg-gray-50';
       default: return 'text-gray-600 bg-gray-50';
     }
   };
@@ -239,6 +239,26 @@ export default function NFTDetailPage() {
       </div>
     );
   }
+  const WalletButton = () => {
+    if (address) {
+      return (
+        <div className="flex items-center space-x-3">
+          <div className="flex items-center space-x-2 px-3 py-2 bg-green-50 border border-green-200 rounded-lg">
+            <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+            <span className="text-sm font-medium text-green-700">
+              {formatAddress(address)}
+            </span>
+          </div>
+          <button
+            onClick={disconnectWallet}
+            className="px-3 py-2 text-sm text-gray-600 hover:text-gray-900 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+          >
+            Disconnect
+          </button>
+        </div>
+      );
+    }
+  }
 
   return (
     <div className="py-8">
@@ -247,12 +267,12 @@ export default function NFTDetailPage() {
           <div className="md:flex">
             {/* Image Section */}
             <div className="md:w-1/2">
-              <div className="aspect-square py-3zf items-center justify-center flex">
+              <div className="aspect-square py-3zf items-center justify-center flex mt-5">
                 {nftDetails.metadata?.image ? (
                   <img
                     src={nftDetails.metadata.image}
                     alt={nftDetails.metadata.name || `NFT ${tokenId}`}
-                    className="w-100 h-100 object-cover rounded-lg"
+                    className="w-full h-full object-cover rounded-lg"
                   />
                 ) : (
                   <div className="w-full h-full bg-gray-200 flex items-center justify-center">
@@ -279,8 +299,8 @@ export default function NFTDetailPage() {
               {/* Owner Info */}
               <div className="mb-6">
                 <h3 className="text-sm font-medium text-gray-700 mb-2">Owner</h3>
-                <p className="text-sm font-mono bg-gray-100 p-2 rounded">
-                  {nftDetails.owner}
+                <p className="text-sm font-mono bg-gray-100 p-2 rounded text-gray-600">
+                  {formatAddress(nftDetails.owner)}
                 </p>
               </div>
 
