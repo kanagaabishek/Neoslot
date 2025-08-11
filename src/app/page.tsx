@@ -58,6 +58,35 @@ export default function Home() {
               sale_state: { sale_id: saleId }
             });
             
+            // Fetch NFT metadata from CW721 contract
+            let metadata = null;
+            try {
+              const nftInfo = await client.queryContractSmart(cw721, {
+                nft_info: { token_id: info.token_id }
+              });
+              
+              // Parse metadata from token_uri or extension (same as NFT details page)
+              let parsedMetadata: any = {};
+              
+              if (nftInfo.token_uri) {
+                try {
+                  parsedMetadata = JSON.parse(nftInfo.token_uri);
+                } catch {
+                  // If parsing fails, treat as plain string
+                  parsedMetadata = { name: nftInfo.token_uri };
+                }
+              }
+              
+              if (nftInfo.extension) {
+                parsedMetadata = { ...parsedMetadata, ...nftInfo.extension };
+              }
+              
+              metadata = parsedMetadata;
+              console.log(`Metadata for token ${info.token_id}:`, metadata);
+            } catch (metadataError) {
+              console.warn(`Could not fetch metadata for token ${info.token_id}:`, metadataError);
+            }
+            
             return {
               saleId,
               tokenId: info.token_id,
@@ -69,6 +98,7 @@ export default function Home() {
               isSold: saleState.status === 'executed',
               startTime: saleState.start_time,
               endTime: saleState.end_time,
+              metadata: metadata,
               ...saleState
             };
           } catch (error) {
@@ -196,6 +226,7 @@ export default function Home() {
                 status={nft.status}
                 coinDenom={nft.coinDenom}
                 isSold={nft.isSold}
+                metadata={nft.metadata}
                 onBuy={() => buyNFT(nft.saleId, nft.price)}
               />
             ))}
