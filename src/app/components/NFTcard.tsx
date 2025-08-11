@@ -100,8 +100,11 @@ const NFTCard: React.FC<NFTCardProps> = ({
           <svg className="w-12 h-12 sm:w-16 sm:h-16 mx-auto mb-2 sm:mb-3" fill="currentColor" viewBox="0 0 20 20">
             <path fillRule="evenodd" d="M4 3a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V5a2 2 0 00-2-2H4zm12 12H4l4-8 3 6 2-4 3 6z" clipRule="evenodd" />
           </svg>
-          <p className="text-xs sm:text-sm font-medium">
-            {metadata?.name ? metadata.name : `NFT #${tokenId}`}
+          <p className="text-xs sm:text-sm font-medium px-2" title={metadata?.name || `NFT #${tokenId}`}>
+            {metadata?.name && metadata.name.length <= 25 
+              ? metadata.name 
+              : `NFT #${tokenId}`
+            }
           </p>
         </div>
       </div>
@@ -109,10 +112,25 @@ const NFTCard: React.FC<NFTCardProps> = ({
       {/* NFT Name - Highlighted */}
       {metadata?.name ? (
         <div className="mb-3 sm:mb-4">
-          <h2 className="text-xl sm:text-2xl font-bold text-black mb-1 leading-tight">
-            {metadata.name}
-          </h2>
-          <p className="text-xs sm:text-sm text-gray-500">Token ID: #{tokenId}</p>
+          {metadata.name.length > 30 ? (
+            // If name is too long, show NFT ID instead but keep original name in title attribute
+            <>
+              <h2 className="text-lg sm:text-xl font-bold mb-1 text-black" title={metadata.name}>
+                NFT #{tokenId}
+              </h2>
+              <p className="text-xs sm:text-sm text-gray-500" title={metadata.name}>
+                "{metadata.name.slice(0, 25)}..."
+              </p>
+            </>
+          ) : (
+            // Normal display for reasonable length names
+            <>
+              <h2 className="text-xl sm:text-2xl font-bold mb-1 leading-tight text-black line-clamp-2" title={metadata.name}>
+                {metadata.name}
+              </h2>
+              <p className="text-xs sm:text-sm text-gray-500">Token ID: #{tokenId}</p>
+            </>
+          )}
         </div>
       ) : (
         <div className="mb-3 sm:mb-4">
