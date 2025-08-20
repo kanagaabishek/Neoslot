@@ -3,6 +3,8 @@
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { getSigningClient } from '../utils/andrClient';
+import { setupKeplrChain } from '../utils/keplrChain';
+import { SigningCosmWasmClient } from '@cosmjs/cosmwasm-stargate';
 import WalletPrompt from '../components/WalletPrompt';
 import NetworkStatus from '../components/NetworkStatus';
 import DebugPanel from '../components/DebugPanel';
@@ -103,19 +105,12 @@ export default function MintPage() {
       clearDebugLogs();
 
       const rpc = process.env.NEXT_PUBLIC_CHAIN_RPC!;
-      const chainId = process.env.NEXT_PUBLIC_CHAIN_ID!;
       
       addDebugLog("Starting MINT-ONLY process...");
-      addDebugLog(`Environment: RPC=${rpc}, Chain=${chainId}`);
+      addDebugLog(`Environment: RPC=${rpc}, Chain=${process.env.NEXT_PUBLIC_CHAIN_ID}`);
       
-      // Get wallet signer
-      if (!window.keplr) {
-        throw new Error("Keplr wallet not found. Please install Keplr extension.");
-      }
-
-      addDebugLog("Enabling Keplr wallet...");
-      await window.keplr.enable(chainId);
-      const offlineSigner = window.keplr.getOfflineSigner(chainId);
+      addDebugLog("Setting up Keplr chain...");
+      const offlineSigner = await setupKeplrChain();
       
       addDebugLog("Creating signing client...");
       const signingClient = await getSigningClient(rpc, offlineSigner);
@@ -186,10 +181,9 @@ export default function MintPage() {
       clearDebugLogs();
 
       const rpc = process.env.NEXT_PUBLIC_CHAIN_RPC!;
-      const chainId = process.env.NEXT_PUBLIC_CHAIN_ID!;
       
-      console.log("Environment check:", { rpc, chainId, cw721, marketplace });
-      addDebugLog(`Environment check: RPC=${rpc}, Chain=${chainId}`);
+      console.log("Environment check:", { rpc, chainId: process.env.NEXT_PUBLIC_CHAIN_ID, cw721, marketplace });
+      addDebugLog(`Environment check: RPC=${rpc}, Chain=${process.env.NEXT_PUBLIC_CHAIN_ID}`);
       addDebugLog(`Contracts: CW721=${cw721}, Marketplace=${marketplace}`);
       
       // Check network connectivity first
@@ -206,15 +200,9 @@ export default function MintPage() {
         throw new Error(`Network error: Cannot reach RPC endpoint ${rpc}. Please check your internet connection.`);
       }
 
-      // Get wallet signer
-      if (!window.keplr) {
-        throw new Error("Keplr wallet not found. Please install Keplr extension.");
-      }
-
-      console.log("Enabling Keplr for chain:", chainId);
-      addDebugLog("Enabling Keplr wallet...");
-      await window.keplr.enable(chainId);
-      const offlineSigner = window.keplr.getOfflineSigner(chainId);
+      console.log("Setting up Keplr chain...");
+      addDebugLog("Setting up Keplr chain...");
+      const offlineSigner = await setupKeplrChain();
       
       console.log("Getting signing client...");
       addDebugLog("Creating signing client...");
@@ -394,7 +382,7 @@ export default function MintPage() {
     }
   };
 
-  const verifyMarketplaceListing = async (tokenId: string, signingClient: any) => {
+  const verifyMarketplaceListing = async (tokenId: string, signingClient: SigningCosmWasmClient) => {
     try {
       addDebugLog("🔍 Verifying NFT listing on marketplace...");
       
@@ -449,8 +437,8 @@ export default function MintPage() {
           }
         });
         
-        const foundSale = saleInfos.find((info: any) => 
-          info.sale_ids && info.sale_ids.length > 0
+        const foundSale = saleInfos.find((info: Record<string, unknown>) => 
+          info.sale_ids && Array.isArray(info.sale_ids) && info.sale_ids.length > 0
         );
         
         if (foundSale) {
@@ -598,7 +586,7 @@ export default function MintPage() {
                     placeholder="10.0"
                   />
                   <p className="text-sm text-gray-600 mt-1">
-                    Price in ANDR tokens (required only for "Mint & List" button)
+                    Price in ANDR tokens (required only for &quot;Mint &amp; List&quot; button)
                   </p>
                 </div>
 
@@ -646,9 +634,9 @@ export default function MintPage() {
                 <div className="bg-gray-50 border border-gray-200 rounded-lg p-4 mb-4">
                   <h4 className="font-medium text-black mb-2">💡 Transaction Tips:</h4>
                   <ul className="text-sm text-gray-700 space-y-1">
-                    <li>• "Mint NFT Only" requires 1 Keplr transaction approval (safe to test)</li>
-                    <li>• "Mint & List NFT" requires 2 Keplr transaction approvals (mint → send_nft to marketplace)</li>
-                    <li>• Try "Mint NFT Only" first to test if minting works</li>
+                    <li>• &quot;Mint NFT Only&quot; requires 1 Keplr transaction approval (safe to test)</li>
+                    <li>• &quot;Mint &amp; List NFT&quot; requires 2 Keplr transaction approvals (mint → send_nft to marketplace)</li>
+                    <li>• Try &quot;Mint NFT Only&quot; first to test if minting works</li>
                     <li>• Each transaction window will appear sequentially - approve them all</li>
                   </ul>
                 </div>

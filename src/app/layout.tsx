@@ -17,6 +17,12 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: "NeoSlot - Andromeda NFT Marketplace",
   description: "Mint, buy, and sell NFTs on the Andromeda blockchain",
+  other: {
+    // Add CSP meta tag for development - allows eval for blockchain libraries
+    'Content-Security-Policy': process.env.NODE_ENV === 'development' 
+      ? "default-src 'self'; script-src 'self' 'unsafe-eval' 'unsafe-inline' 'wasm-unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self' data:; connect-src 'self' https: wss: ws:; worker-src 'self' blob:;"
+      : "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self' data:; connect-src 'self' https: wss: ws:;"
+  }
 };
 
 export default function RootLayout({
