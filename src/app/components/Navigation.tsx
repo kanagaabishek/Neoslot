@@ -12,6 +12,7 @@ const Navigation: React.FC = () => {
 
   const navItems = [
     { href: '/', label: 'Marketplace', icon: '🏠' },
+    { href: '/auction', label: 'Auctions', icon: '⚡' },
     { href: '/mint', label: 'Mint NFT', icon: '🎨' },
     { href: '/profile', label: 'Profile', icon: '👤' },
   ];

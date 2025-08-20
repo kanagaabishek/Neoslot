@@ -1,6 +1,8 @@
 'use client'
 import { useEffect, useState } from "react";
+import Link from "next/link";
 import { getQueryClient, getSigningClient } from "./utils/andrClient";
+import { setupKeplrChain } from "./utils/keplrChain";
 import NFTCard from "./components/NFTcard";
 import WalletPrompt from "./components/WalletPrompt";
 import { useWallet } from "./hooks/useWallet";
@@ -8,9 +10,27 @@ import { useWallet } from "./hooks/useWallet";
 const cw721 = process.env.NEXT_PUBLIC_CW721_ADDRESS!;
 const marketplace = process.env.NEXT_PUBLIC_MARKETPLACE_ADDRESS!;
 
+interface NFTSale {
+  saleId: string;
+  tokenId: string;
+  price: string;
+  seller: string;
+  status: string;
+  coinDenom: string;
+  isSold: boolean;
+  metadata?: {
+    name?: string;
+    description?: string;
+    image?: string;
+    start_time?: string;
+    meeting_link?: string;
+    event_type?: string;
+  };
+}
+
 export default function Home() {
   const { address, isConnected } = useWallet();
-  const [nfts, setNFTs] = useState<any[]>([]);
+  const [nfts, setNFTs] = useState<NFTSale[]>([]);
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string>("");
 
@@ -21,15 +41,26 @@ export default function Home() {
     }
   }, []);
 
+  // Debug environment variables
+  useEffect(() => {
+    console.log('🔧 Environment variables check:');
+    console.log('NEXT_PUBLIC_RPC_URL:', process.env.NEXT_PUBLIC_RPC_URL);
+    console.log('NEXT_PUBLIC_CHAIN_RPC:', process.env.NEXT_PUBLIC_CHAIN_RPC);
+    console.log('NEXT_PUBLIC_CHAIN_ID:', process.env.NEXT_PUBLIC_CHAIN_ID);
+    console.log('NEXT_PUBLIC_CW721_ADDRESS:', process.env.NEXT_PUBLIC_CW721_ADDRESS);
+    console.log('NEXT_PUBLIC_MARKETPLACE_ADDRESS:', process.env.NEXT_PUBLIC_MARKETPLACE_ADDRESS);
+  }, []);
+
   const fetchNFTs = async () => {
     // Only run on client side
     if (typeof window === 'undefined') return;
     
+    let rpc = '';
     try {
       setLoading(true);
       setError("");
       
-      const rpc = process.env.NEXT_PUBLIC_CHAIN_RPC!;
+      rpc = process.env.NEXT_PUBLIC_RPC_URL || process.env.NEXT_PUBLIC_CHAIN_RPC!;
       const client = await getQueryClient(rpc);
 
       // Get all sales for our CW721 contract using sale_infos_for_address
@@ -51,8 +82,8 @@ export default function Home() {
       }
 
       // Fetch detailed sale state for each sale
-      const salesPromises = saleInfosResponse.flatMap((info: any) => 
-        info.sale_ids.map(async (saleId: string) => {
+      const salesPromises = saleInfosResponse.flatMap((info: Record<string, unknown>) => 
+        (info.sale_ids as string[]).map(async (saleId: string) => {
           try {
             const saleState = await client.queryContractSmart(marketplace, {
               sale_state: { sale_id: saleId }
@@ -66,7 +97,7 @@ export default function Home() {
               });
               
               // Parse metadata from token_uri or extension (same as NFT details page)
-              let parsedMetadata: any = {};
+              let parsedMetadata: Record<string, unknown> = {};
               
               if (nftInfo.token_uri) {
                 try {
@@ -89,17 +120,13 @@ export default function Home() {
             
             return {
               saleId,
-              tokenId: info.token_id,
-              tokenAddress: info.token_address,
+              tokenId: info.token_id as string,
               price: saleState.price,
               status: saleState.status,
               seller: saleState.recipient?.address,
               coinDenom: saleState.coin_denom,
               isSold: saleState.status === 'executed',
-              startTime: saleState.start_time,
-              endTime: saleState.end_time,
-              metadata: metadata,
-              ...saleState
+              metadata: metadata as NFTSale['metadata']
             };
           } catch (error) {
             console.error(`Error fetching sale ${saleId}:`, error);
@@ -116,7 +143,14 @@ export default function Home() {
 
     } catch (err) {
       console.error("Error fetching NFTs:", err);
-      setError("Failed to fetch NFTs. Please check your connection and contract addresses.");
+      console.error("Error details:", {
+        message: err instanceof Error ? err.message : String(err),
+        stack: err instanceof Error ? err.stack : undefined,
+        rpc,
+        cw721,
+        marketplace
+      });
+      setError(`Failed to fetch NFTs: ${err instanceof Error ? err.message : String(err)}`);
     } finally {
       setLoading(false);
     }
@@ -125,21 +159,15 @@ export default function Home() {
   const buyNFT = async (saleId: string, price: string) => {
     if (!isConnected || typeof window === 'undefined') return;
 
+    let rpc = '';
     try {
       setLoading(true);
       setError("");
 
-      const rpc = process.env.NEXT_PUBLIC_CHAIN_RPC!;
-      const chainId = process.env.NEXT_PUBLIC_CHAIN_ID!;
+      rpc = process.env.NEXT_PUBLIC_RPC_URL || process.env.NEXT_PUBLIC_CHAIN_RPC!;
       
-      // Get wallet signer
-      if (!window.keplr) {
-        alert('Please install Keplr extension');
-        return;
-      }
-
-      await window.keplr.enable(chainId);
-      const offlineSigner = window.keplr.getOfflineSigner(chainId);
+      // Setup Keplr chain and get signer
+      const offlineSigner = await setupKeplrChain();
       
       const signingClient = await getSigningClient(rpc, offlineSigner);
 
@@ -161,7 +189,14 @@ export default function Home() {
       fetchNFTs(); // refresh
     } catch (err) {
       console.error("Error buying NFT:", err);
-      setError("Failed to buy NFT. Please try again.");
+      console.error("Buy error details:", {
+        message: err instanceof Error ? err.message : String(err),
+        stack: err instanceof Error ? err.stack : undefined,
+        saleId,
+        price,
+        rpc
+      });
+      setError(`Failed to buy NFT: ${err instanceof Error ? err.message : String(err)}`);
     } finally {
       setLoading(false);
     }
@@ -175,11 +210,12 @@ export default function Home() {
   }, []);
 
   return (
-    <div className="px-4 py-8 sm:px-6 sm:py-12 lg:py-16 max-w-6xl mx-auto">
-      <div className="mb-12 sm:mb-16 text-center">
-        <h1 className="text-3xl sm:text-4xl lg:text-6xl font-bold text-black mb-4 sm:mb-6">Welcome to NeoSlot Marketplace</h1>
-        <p className="text-gray-600 text-base sm:text-lg max-w-2xl mx-auto px-4">Discover, collect, and trade unique NFTs on the Andromeda blockchain</p>
-      </div>
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100">
+      <div className="px-4 py-8 sm:px-6 sm:py-12 lg:py-16 max-w-6xl mx-auto">
+        <div className="mb-12 sm:mb-16 text-center">
+          <h1 className="text-3xl sm:text-4xl lg:text-6xl font-bold text-black mb-4 sm:mb-6">Welcome to NeoSlot Marketplace</h1>
+          <p className="text-gray-600 text-base sm:text-lg max-w-2xl mx-auto px-4">Discover, collect, and trade unique NFTs on the Andromeda blockchain</p>
+        </div>
 
       {error && (
         <div className="bg-gray-50 border border-gray-300 text-black px-4 sm:px-6 py-4 rounded-xl mb-6 sm:mb-8">
@@ -233,6 +269,7 @@ export default function Home() {
           </div>
         )}
       </div>
+    </div>
     </div>
   );
 }

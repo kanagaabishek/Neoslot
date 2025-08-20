@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useEffect } from 'react';
+import { setupKeplrChain } from '../utils/keplrChain';
 
 export const useWallet = () => {
   const [address, setAddress] = useState<string>('');
@@ -15,10 +16,7 @@ export const useWallet = () => {
     try {
       setIsConnecting(true);
       
-      const chainId = 'galileo-4';
-      await window.keplr.enable(chainId);
-      
-      const offlineSigner = window.keplr.getOfflineSigner(chainId);
+      const offlineSigner = await setupKeplrChain();
       const accounts = await offlineSigner.getAccounts();
       
       if (accounts.length > 0) {
@@ -74,8 +72,9 @@ export const useWallet = () => {
       window.addEventListener('keplr_keystorechange', handleKeystoreChange);
       
       // Listen for wallet events from other components
-      const handleWalletConnected = (event: any) => {
-        setAddress(event.detail.address);
+      const handleWalletConnected = (event: Event) => {
+        const customEvent = event as CustomEvent<{ address: string }>;
+        setAddress(customEvent.detail.address);
       };
       
       const handleWalletDisconnected = () => {

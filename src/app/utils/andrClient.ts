@@ -1,4 +1,5 @@
 // utils/andrClient.ts
+import { OfflineSigner } from "@cosmjs/proto-signing";
 
 export const getQueryClient = async (rpcUrl: string) => {
   try {
@@ -14,7 +15,7 @@ export const getQueryClient = async (rpcUrl: string) => {
   }
 };
 
-export const getSigningClient = async (rpcUrl: string, wallet: any) => {
+export const getSigningClient = async (rpcUrl: string, wallet: OfflineSigner) => {
   try {
     // Dynamic import to avoid SSR issues
     const { SigningCosmWasmClient } = await import("@cosmjs/cosmwasm-stargate");
