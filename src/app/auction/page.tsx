@@ -70,11 +70,11 @@ function AuctionCard({
 
   return (
     <div 
-      className="bg-black/40 backdrop-blur-md rounded-xl border border-purple-500/20 hover:border-purple-400/40 transition-all cursor-pointer overflow-hidden"
+      className="bg-white rounded-xl border border-gray-200 hover:border-gray-300 hover:shadow-lg transition-all cursor-pointer overflow-hidden"
       onClick={handleCardClick}
     >
       {/* Image */}
-      <div className="relative h-48 bg-slate-800 overflow-hidden">
+      <div className="relative h-48 bg-gray-100 overflow-hidden">
         {auction.metadata?.image ? (
           <img 
             src={auction.metadata.image} 
@@ -82,23 +82,23 @@ function AuctionCard({
             className="w-full h-full object-cover"
           />
         ) : (
-          <div className="w-full h-full flex items-center justify-center text-slate-400">
+          <div className="w-full h-full flex items-center justify-center text-gray-400">
             <span className="text-4xl">🖼️</span>
           </div>
         )}
         
         {/* Status Badge */}
         <div className={`absolute top-3 left-3 px-2 py-1 rounded-full text-xs font-medium ${
-          auction.status === 'active' ? 'bg-green-500/20 text-green-300' :
-          auction.status === 'ended' ? 'bg-red-500/20 text-red-300' :
-          'bg-gray-500/20 text-gray-300'
+          auction.status === 'active' ? 'bg-green-100 text-green-800' :
+          auction.status === 'ended' ? 'bg-red-100 text-red-800' :
+          'bg-gray-100 text-gray-800'
         }`}>
           {auction.status.toUpperCase()}
         </div>
 
         {/* Event Type Badge */}
         {auction.metadata?.event_type && (
-          <div className="absolute top-3 right-3 bg-purple-500/20 text-purple-300 px-2 py-1 rounded-full text-xs font-medium">
+          <div className="absolute top-3 right-3 bg-black text-white px-2 py-1 rounded-full text-xs font-medium">
             {auction.metadata.event_type}
           </div>
         )}
@@ -106,34 +106,34 @@ function AuctionCard({
 
       {/* Content */}
       <div className="p-4">
-        <h3 className="text-lg font-semibold text-white mb-2">
+        <h3 className="text-lg font-semibold text-black mb-2">
           {auction.metadata?.name || `Token #${auction.token_id}`}
         </h3>
         
-        <p className="text-slate-300 text-sm mb-3 line-clamp-2">
+        <p className="text-gray-600 text-sm mb-3 line-clamp-2">
           {auction.metadata?.description || 'No description available'}
         </p>
 
         {/* Auction Details */}
         <div className="space-y-2 mb-4">
           <div className="flex justify-between text-sm">
-            <span className="text-slate-400">Min Bid:</span>
-            <span className="font-medium text-white">{formatPrice(auction.min_bid)}</span>
+            <span className="text-gray-500">Min Bid:</span>
+            <span className="font-medium text-black">{formatPrice(auction.min_bid)}</span>
           </div>
           
           {auction.highest_bid && (
             <div className="flex justify-between text-sm">
-              <span className="text-slate-400">Highest Bid:</span>
-              <span className="font-medium text-green-300">
+              <span className="text-gray-500">Highest Bid:</span>
+              <span className="font-medium text-green-600">
                 {formatPrice(auction.highest_bid.amount)}
               </span>
             </div>
           )}
           
           <div className="flex justify-between text-sm">
-            <span className="text-slate-400">Time:</span>
+            <span className="text-gray-500">Time:</span>
             <span className={`font-medium ${
-              auction.status === 'active' ? 'text-green-300' : 'text-red-300'
+              auction.status === 'active' ? 'text-green-600' : 'text-red-600'
             }`}>
               {timeRemaining}
             </span>
@@ -142,7 +142,7 @@ function AuctionCard({
 
         {/* Bidding Section */}
         {isActive && (
-          <div className="border-t border-slate-700 pt-3">
+          <div className="border-t border-gray-200 pt-3">
             <div className="flex gap-2">
               <input
                 type="number"
@@ -151,13 +151,13 @@ function AuctionCard({
                 value={bidAmount}
                 onChange={(e) => setBidAmount(e.target.value)}
                 onClick={(e) => e.stopPropagation()}
-                className="flex-1 px-3 py-2 bg-slate-800 border border-slate-600 rounded-lg text-sm text-white focus:outline-none focus:ring-2 focus:ring-purple-500"
+                className="flex-1 px-3 py-2 bg-white border border-gray-300 rounded-lg text-sm text-black focus:outline-none focus:ring-2 focus:ring-black focus:border-black"
                 placeholder="Bid amount"
               />
               <button
                 onClick={handleBidClick}
                 disabled={loading || !bidAmount}
-                className="px-4 py-2 bg-purple-600 text-white rounded-lg text-sm font-medium hover:bg-purple-700 disabled:opacity-50 transition-colors"
+                className="px-4 py-2 bg-black text-white rounded-lg text-sm font-medium hover:bg-gray-800 disabled:opacity-50 transition-colors"
               >
                 Bid
               </button>
@@ -267,8 +267,19 @@ export default function AuctionPage() {
 
   const determineAuctionStatus = (auction: Record<string, unknown>): 'active' | 'ended' | 'cancelled' => {
     const now = Date.now() / 1000;
+    const startTime = typeof auction.start_time === 'number' ? auction.start_time : 0;
+    const endTime = typeof auction.end_time === 'number' ? auction.end_time : 0;
+    
+    console.log('Status determination (listing page):', {
+      now,
+      startTime,
+      endTime,
+      cancelled: auction.cancelled
+    });
+    
     if (auction.cancelled) return 'cancelled';
-    if (typeof auction.end_time === 'number' && now > auction.end_time) return 'ended';
+    if (now < startTime) return 'active'; // Not started yet, but show as active for UI
+    if (now > endTime) return 'ended';
     return 'active';
   };
 
@@ -364,15 +375,15 @@ export default function AuctionPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900">
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100">
       <div className="max-w-7xl mx-auto px-4 py-8">
         <div className="mb-8">
-          <h1 className="text-4xl font-bold text-white mb-4">🏷️ Live Auctions</h1>
-          <p className="text-slate-300">Bid on exclusive NFTs and events</p>
+          <h1 className="text-4xl font-bold text-black mb-4">🏷️ Live Auctions</h1>
+          <p className="text-gray-600">Bid on exclusive NFTs and events</p>
           <div className="mt-4">
             <button 
               onClick={() => router.push('/auction/mint')}
-              className="bg-gradient-to-r from-purple-600 to-blue-600 text-white px-4 py-2 rounded-lg font-medium hover:from-purple-700 hover:to-blue-700 transition-all"
+              className="bg-black text-white px-6 py-3 rounded-lg font-medium hover:bg-gray-800 transition-all"
             >
               Create Auction
             </button>
@@ -380,14 +391,14 @@ export default function AuctionPage() {
         </div>
 
         {error && (
-          <div className="mb-6 bg-red-500/10 border border-red-500/50 rounded-lg p-4">
-            <p className="text-red-400">{error}</p>
+          <div className="mb-6 bg-red-50 border border-red-300 rounded-lg p-4">
+            <p className="text-red-800">{error}</p>
           </div>
         )}
 
         {success && (
-          <div className="mb-6 bg-green-500/10 border border-green-500/50 rounded-lg p-4">
-            <p className="text-green-400">{success}</p>
+          <div className="mb-6 bg-green-50 border border-green-300 rounded-lg p-4">
+            <p className="text-green-800">{success}</p>
           </div>
         )}
 
@@ -395,7 +406,7 @@ export default function AuctionPage() {
           <button
             onClick={loadAuctions}
             disabled={loading}
-            className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 disabled:opacity-50 transition-colors"
+            className="px-4 py-2 bg-black text-white rounded-lg hover:bg-gray-800 disabled:opacity-50 transition-colors"
           >
             {loading ? 'Loading...' : 'Refresh Auctions'}
           </button>
@@ -404,10 +415,10 @@ export default function AuctionPage() {
         {/* Auctions Grid */}
         {auctions.length === 0 ? (
           <div className="text-center py-12">
-            <div className="text-slate-400 text-lg mb-4">No active auctions found</div>
+            <div className="text-gray-600 text-lg mb-4">No active auctions found</div>
             <button
               onClick={() => router.push('/auction/mint')}
-              className="bg-gradient-to-r from-purple-600 to-blue-600 text-white px-6 py-3 rounded-lg font-medium hover:from-purple-700 hover:to-blue-700 transition-all"
+              className="bg-black text-white px-6 py-3 rounded-lg font-medium hover:bg-gray-800 transition-all"
             >
               Create First Auction
             </button>

@@ -203,15 +203,15 @@ export default function AuctionMintPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900">
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100">
       {/* Main Content */}
       <div className="max-w-4xl mx-auto px-4 py-8">
-        <div className="bg-black/40 backdrop-blur-md rounded-2xl border border-purple-500/20 p-8">
+        <div className="bg-white rounded-2xl border border-gray-200 p-8">
           <div className="flex justify-between items-center mb-8">
-            <h1 className="text-3xl font-bold text-white">Create Auction NFT</h1>
+            <h1 className="text-3xl font-bold text-black">Create Auction NFT</h1>
             <button 
               onClick={() => router.push('/auction')}
-              className="text-purple-300 hover:text-white transition-colors"
+              className="text-gray-600 hover:text-black transition-colors"
             >
               View Auctions
             </button>
@@ -220,55 +220,55 @@ export default function AuctionMintPage() {
           <div className="grid md:grid-cols-2 gap-8">
             {/* NFT Details */}
             <div className="space-y-6">
-              <h2 className="text-xl font-semibold text-white mb-4">NFT Details</h2>
+              <h2 className="text-xl font-semibold text-black mb-4">NFT Details</h2>
               
               <div>
-                <label className="block text-sm font-medium text-slate-300 mb-2">
+                <label className="block text-sm font-medium text-gray-600 mb-2">
                   Token Name *
                 </label>
                 <input
                   type="text"
                   value={tokenName}
                   onChange={(e) => setTokenName(e.target.value)}
-                  className="w-full px-4 py-3 bg-slate-800 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-purple-500"
+                  className="w-full px-4 py-3 bg-white border border-gray-300 rounded-lg text-black focus:outline-none focus:ring-2 focus:ring-black focus:border-black"
                   placeholder="e.g., VIP Concert Pass"
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-slate-300 mb-2">
+                <label className="block text-sm font-medium text-gray-600 mb-2">
                   Description
                 </label>
                 <textarea
                   value={description}
                   onChange={(e) => setDescription(e.target.value)}
                   rows={3}
-                  className="w-full px-4 py-3 bg-slate-800 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-purple-500"
+                  className="w-full px-4 py-3 bg-white border border-gray-300 rounded-lg text-black focus:outline-none focus:ring-2 focus:ring-black focus:border-black"
                   placeholder="Describe your NFT..."
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-slate-300 mb-2">
+                <label className="block text-sm font-medium text-gray-600 mb-2">
                   Image URL
                 </label>
                 <input
                   type="url"
                   value={imageUrl}
                   onChange={(e) => setImageUrl(e.target.value)}
-                  className="w-full px-4 py-3 bg-slate-800 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-purple-500"
+                  className="w-full px-4 py-3 bg-white border border-gray-300 rounded-lg text-black focus:outline-none focus:ring-2 focus:ring-black focus:border-black"
                   placeholder="https://example.com/image.jpg"
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-slate-300 mb-2">
+                <label className="block text-sm font-medium text-gray-600 mb-2">
                   Event Type
                 </label>
                 <select
                   value={eventType}
                   onChange={(e) => setEventType(e.target.value)}
-                  className="w-full px-4 py-3 bg-slate-800 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-purple-500"
+                  className="w-full px-4 py-3 bg-white border border-gray-300 rounded-lg text-black focus:outline-none focus:ring-2 focus:ring-black focus:border-black"
                 >
                   <option value="">Select type...</option>
                   <option value="concert">Concert</option>
@@ -283,66 +283,66 @@ export default function AuctionMintPage() {
 
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-slate-300 mb-2">
+                  <label className="block text-sm font-medium text-gray-600 mb-2">
                     Event Date
                   </label>
                   <input
                     type="datetime-local"
                     value={eventDate}
                     onChange={(e) => setEventDate(e.target.value)}
-                    className="w-full px-4 py-3 bg-slate-800 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-purple-500"
+                    className="w-full px-4 py-3 bg-white border border-gray-300 rounded-lg text-black focus:outline-none focus:ring-2 focus:ring-black focus:border-black"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-slate-300 mb-2">
+                  <label className="block text-sm font-medium text-gray-600 mb-2">
                     Capacity
                   </label>
                   <input
                     type="number"
                     value={capacity}
                     onChange={(e) => setCapacity(e.target.value)}
-                    className="w-full px-4 py-3 bg-slate-800 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-purple-500"
+                    className="w-full px-4 py-3 bg-white border border-gray-300 rounded-lg text-black focus:outline-none focus:ring-2 focus:ring-black"
                     placeholder="100"
                   />
                 </div>
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-slate-300 mb-2">
+                <label className="block text-sm font-medium text-gray-600 mb-2">
                   Location
                 </label>
                 <input
                   type="text"
                   value={location}
                   onChange={(e) => setLocation(e.target.value)}
-                  className="w-full px-4 py-3 bg-slate-800 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-purple-500"
+                  className="w-full px-4 py-3 bg-white border border-gray-300 rounded-lg text-black focus:outline-none focus:ring-2 focus:ring-black"
                   placeholder="e.g., Virtual, New York, etc."
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-slate-300 mb-2">
+                <label className="block text-sm font-medium text-gray-600 mb-2">
                   Organizer
                 </label>
                 <input
                   type="text"
                   value={organizer}
                   onChange={(e) => setOrganizer(e.target.value)}
-                  className="w-full px-4 py-3 bg-slate-800 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-purple-500"
+                  className="w-full px-4 py-3 bg-white border border-gray-300 rounded-lg text-black focus:outline-none focus:ring-2 focus:ring-black"
                   placeholder={address || "Your address"}
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-slate-300 mb-2">
+                <label className="block text-sm font-medium text-gray-600 mb-2">
                   Benefits & Perks (one per line)
                 </label>
                 <textarea
                   value={benefits}
                   onChange={(e) => setBenefits(e.target.value)}
                   rows={4}
-                  className="w-full px-4 py-3 bg-slate-800 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-purple-500"
+                  className="w-full px-4 py-3 bg-white border border-gray-300 rounded-lg text-black focus:outline-none focus:ring-2 focus:ring-black"
                   placeholder={`VIP Access\nMeet & Greet\nExclusive Merchandise\nPriority Seating`}
                 />
               </div>
@@ -350,10 +350,10 @@ export default function AuctionMintPage() {
 
             {/* Auction Settings */}
             <div className="space-y-6">
-              <h2 className="text-xl font-semibold text-white mb-4">Auction Settings</h2>
+              <h2 className="text-xl font-semibold text-black mb-4">Auction Settings</h2>
               
               <div>
-                <label className="block text-sm font-medium text-slate-300 mb-2">
+                <label className="block text-sm font-medium text-gray-600 mb-2">
                   Minimum Bid *
                 </label>
                 <div className="relative">
@@ -363,7 +363,7 @@ export default function AuctionMintPage() {
                     min="0"
                     value={minBid}
                     onChange={(e) => setMinBid(e.target.value)}
-                    className="w-full px-4 py-3 pr-20 bg-slate-800 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-purple-500"
+                    className="w-full px-4 py-3 pr-20 bg-white border border-gray-300 rounded-lg text-black focus:outline-none focus:ring-2 focus:ring-black"
                     placeholder="0.1"
                   />
                   <div className="absolute right-3 top-1/2 transform -translate-y-1/2 text-slate-400">
@@ -373,13 +373,13 @@ export default function AuctionMintPage() {
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-slate-300 mb-2">
+                <label className="block text-sm font-medium text-gray-600 mb-2">
                   Auction Duration *
                 </label>
                 <select
                   value={auctionDuration}
                   onChange={(e) => setAuctionDuration(e.target.value)}
-                  className="w-full px-4 py-3 bg-slate-800 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-purple-500"
+                  className="w-full px-4 py-3 bg-white border border-gray-300 rounded-lg text-black focus:outline-none focus:ring-2 focus:ring-black"
                 >
                   <option value="1">1 Hour</option>
                   <option value="6">6 Hours</option>
@@ -392,13 +392,13 @@ export default function AuctionMintPage() {
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-slate-300 mb-2">
+                <label className="block text-sm font-medium text-gray-600 mb-2">
                   Bid Currency
                 </label>
                 <select
                   value={coinDenom}
                   onChange={(e) => setCoinDenom(e.target.value)}
-                  className="w-full px-4 py-3 bg-slate-800 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-purple-500"
+                  className="w-full px-4 py-3 bg-white border border-gray-300 rounded-lg text-black focus:outline-none focus:ring-2 focus:ring-black"
                 >
                   <option value="uandr">ANDR</option>
                   <option value="ujuno">JUNO</option>
@@ -407,26 +407,26 @@ export default function AuctionMintPage() {
               </div>
 
               {/* Preview Card */}
-              <div className="bg-slate-800/50 rounded-xl p-4 border border-slate-600">
-                <h3 className="text-lg font-semibold text-white mb-3">Preview</h3>
+              <div className="bg-white/50 rounded-xl p-4 border border-gray-300">
+                <h3 className="text-lg font-semibold text-black mb-3">Preview</h3>
                 <div className="space-y-2 text-sm">
                   <div className="flex justify-between">
                     <span className="text-slate-400">Name:</span>
-                    <span className="text-white">{tokenName || "Unnamed"}</span>
+                    <span className="text-black">{tokenName || "Unnamed"}</span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-slate-400">Type:</span>
-                    <span className="text-white">{eventType || "Not specified"}</span>
+                    <span className="text-black">{eventType || "Not specified"}</span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-slate-400">Min Bid:</span>
-                    <span className="text-white">
+                    <span className="text-black">
                       {minBid || "0"} {coinDenom.replace('u', '').toUpperCase()}
                     </span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-slate-400">Duration:</span>
-                    <span className="text-white">{auctionDuration} hours</span>
+                    <span className="text-black">{auctionDuration} hours</span>
                   </div>
                 </div>
               </div>
@@ -435,7 +435,7 @@ export default function AuctionMintPage() {
               <button
                 onClick={mintAndCreateAuction}
                 disabled={loading || !tokenName || !minBid}
-                className="w-full bg-gradient-to-r from-purple-600 to-blue-600 text-white py-4 px-6 rounded-lg font-semibold hover:from-purple-700 hover:to-blue-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                className="w-full bg-gradient-to-r from-purple-600 to-blue-600 text-black py-4 px-6 rounded-lg font-semibold hover:from-purple-700 hover:to-blue-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {loading ? "Creating Auction..." : "Create Auction NFT"}
               </button>
