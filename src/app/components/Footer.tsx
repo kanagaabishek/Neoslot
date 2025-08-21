@@ -1,4 +1,5 @@
 import React from 'react';
+import Link from "next/link";
 
 const Footer: React.FC = () => {
   return (
@@ -21,7 +22,7 @@ const Footer: React.FC = () => {
           <div>
             <h3 className="font-bold text-black mb-4 sm:mb-6">Marketplace</h3>
             <ul className="space-y-2 sm:space-y-3 text-sm text-gray-600">
-              <li><a href="/" className="hover:text-black transition-colors">Browse NFTs</a></li>
+              <li><Link href="/" className="hover:text-black transition-colors">Browse NFTs</Link></li>
               <li><a href="/mint" className="hover:text-black transition-colors">Mint NFT</a></li>
             </ul>
           </div>

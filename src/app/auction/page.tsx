@@ -89,9 +89,9 @@ function AuctionCard({
         
         {/* Status Badge */}
         <div className={`absolute top-3 left-3 px-2 py-1 rounded-full text-xs font-medium ${
-          auction.status === 'active' ? 'bg-green-100 text-green-800' :
-          auction.status === 'ended' ? 'bg-red-100 text-red-800' :
-          'bg-gray-100 text-gray-800'
+          auction.status === 'active' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
+          // auction.status === 'ended' ?  :
+          // 'bg-gray-100 text-gray-800'
         }`}>
           {auction.status.toUpperCase()}
         </div>
@@ -107,7 +107,7 @@ function AuctionCard({
       {/* Content */}
       <div className="p-4">
         <h3 className="text-lg font-semibold text-black mb-2">
-          {auction.metadata?.name || `Token #${auction.token_id}`}
+          {auction.metadata?.name || `NFT # ${auction.token_id}`}
         </h3>
         
         <p className="text-gray-600 text-sm mb-3 line-clamp-2">
@@ -231,9 +231,19 @@ export default function AuctionPage() {
               try {
                 const tokenQuery = { nft_info: { token_id: auctionDetails.token_id } };
                 const tokenInfo = await queryClient.queryContractSmart(cw721, tokenQuery);
-                metadata = tokenInfo.extension || {};
+                
+                // Use the same metadata parsing logic as the details page
+                metadata = tokenInfo?.extension || tokenInfo?.token_uri ? (() => {
+                  try {
+                    return typeof tokenInfo.token_uri === 'string' ? JSON.parse(tokenInfo.token_uri) : tokenInfo.extension || {};
+                  } catch {
+                    return { name: tokenInfo.token_uri };
+                  }
+                })() : {};
+                
+                addDebugLog(`Loaded metadata for token ${auctionDetails.token_id}: ${JSON.stringify(metadata)}`);
               } catch (err) {
-                addDebugLog(`Could not get metadata for token ${auctionDetails.token_id}`);
+                addDebugLog(`Could not get metadata for token ${auctionDetails.token_id}: ${err}`);
               }
             }
             

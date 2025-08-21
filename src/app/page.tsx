@@ -61,17 +61,46 @@ export default function Home() {
       setError("");
       
       rpc = process.env.NEXT_PUBLIC_RPC_URL || process.env.NEXT_PUBLIC_CHAIN_RPC!;
-      const client = await getQueryClient(rpc);
+      
+      if (!rpc) {
+        throw new Error('No RPC URL configured. Please check your environment variables.');
+      }
+      
+      console.log(`Connecting to RPC: ${rpc}`);
+      
+      let client;
+      try {
+        client = await getQueryClient(rpc);
+        if (!client) {
+          throw new Error('Failed to create query client');
+        }
+        console.log('Successfully connected to RPC');
+      } catch (rpcError) {
+        console.error('RPC connection failed:', rpcError);
+        throw new Error(`Failed to connect to RPC endpoint: ${rpc}. Please check your network connection.`);
+      }
 
       // Get all sales for our CW721 contract using sale_infos_for_address
       console.log('Querying marketplace for sales...');
-      const saleInfosResponse = await client.queryContractSmart(marketplace, {
-        sale_infos_for_address: { 
-          token_address: cw721,
-          start_after: null,
-          limit: 50 // Get up to 50 sales
-        }
-      });
+      
+      let saleInfosResponse;
+      try {
+        saleInfosResponse = await Promise.race([
+          client.queryContractSmart(marketplace, {
+            sale_infos_for_address: { 
+              token_address: cw721,
+              start_after: null,
+              limit: 50 // Get up to 50 sales
+            }
+          }),
+          new Promise((_, reject) => 
+            setTimeout(() => reject(new Error('Marketplace query timeout')), 15000)
+          )
+        ]);
+      } catch (marketplaceError) {
+        console.error('Marketplace query failed:', marketplaceError);
+        throw new Error('Failed to fetch marketplace data. The marketplace contract may be unavailable.');
+      }
       
       console.log('Sale infos response:', saleInfosResponse);
       
@@ -85,16 +114,37 @@ export default function Home() {
       const salesPromises = saleInfosResponse.flatMap((info: Record<string, unknown>) => 
         (info.sale_ids as string[]).map(async (saleId: string) => {
           try {
-            const saleState = await client.queryContractSmart(marketplace, {
-              sale_state: { sale_id: saleId }
-            });
+            console.log(`Fetching sale state for sale ID: ${saleId}`);
+            
+            // Add timeout and retry logic
+            let saleState;
+            try {
+              saleState = await Promise.race([
+                client.queryContractSmart(marketplace, {
+                  sale_state: { sale_id: saleId }
+                }),
+                new Promise((_, reject) => 
+                  setTimeout(() => reject(new Error('Timeout')), 10000)
+                )
+              ]);
+              console.log(`Sale state for ${saleId}:`, saleState);
+            } catch (saleStateError) {
+              console.error(`Failed to fetch sale state for ${saleId}:`, saleStateError);
+              throw saleStateError;
+            }
             
             // Fetch NFT metadata from CW721 contract
             let metadata = null;
             try {
-              const nftInfo = await client.queryContractSmart(cw721, {
-                nft_info: { token_id: info.token_id }
-              });
+              console.log(`Fetching NFT info for token: ${info.token_id}`);
+              const nftInfo = await Promise.race([
+                client.queryContractSmart(cw721, {
+                  nft_info: { token_id: info.token_id }
+                }),
+                new Promise((_, reject) => 
+                  setTimeout(() => reject(new Error('NFT info timeout')), 8000)
+                )
+              ]);
               
               // Parse metadata from token_uri or extension (same as NFT details page)
               let parsedMetadata: Record<string, unknown> = {};
@@ -129,17 +179,35 @@ export default function Home() {
               metadata: metadata as NFTSale['metadata']
             };
           } catch (error) {
-            console.error(`Error fetching sale ${saleId}:`, error);
+            console.error(`Error fetching sale ${saleId}:`, {
+              error: error instanceof Error ? error.message : String(error),
+              saleId,
+              tokenId: info.token_id
+            });
+            // Return null so we can filter it out, but don't crash the entire fetch
             return null;
           }
         })
       );
 
-      const salesResults = await Promise.all(salesPromises);
-      const validSales = salesResults.filter(sale => sale !== null);
+      console.log(`Processing ${salesPromises.length} sales...`);
       
-      console.log('Valid sales:', validSales);
+      // Use Promise.allSettled to handle individual failures gracefully
+      const salesResults = await Promise.allSettled(salesPromises);
+      const validSales = salesResults
+        .filter((result): result is PromiseFulfilledResult<NFTSale | null> => 
+          result.status === 'fulfilled' && result.value !== null
+        )
+        .map(result => result.value);
+      
+      console.log(`Successfully loaded ${validSales.length} out of ${salesPromises.length} sales`);
       setNFTs(validSales);
+
+      // Show a warning if some sales failed to load
+      if (validSales.length < salesPromises.length) {
+        const failedCount = salesPromises.length - validSales.length;
+        console.warn(`${failedCount} sales failed to load`);
+      }
 
     } catch (err) {
       console.error("Error fetching NFTs:", err);
@@ -218,8 +286,28 @@ export default function Home() {
         </div>
 
       {error && (
-        <div className="bg-gray-50 border border-gray-300 text-black px-4 sm:px-6 py-4 rounded-xl mb-6 sm:mb-8">
-          {error}
+        <div className="bg-red-50 border border-red-300 text-red-800 px-4 sm:px-6 py-4 rounded-xl mb-6 sm:mb-8">
+          <div className="flex items-start">
+            <div className="flex-shrink-0">
+              <svg className="h-5 w-5 text-red-400 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z" />
+              </svg>
+            </div>
+            <div className="ml-3 flex-1">
+              <p className="text-sm font-medium">{error}</p>
+              <div className="mt-2">
+                <button
+                  onClick={() => {
+                    setError("");
+                    fetchNFTs();
+                  }}
+                  className="text-sm bg-red-100 text-red-800 px-3 py-1 rounded hover:bg-red-200 transition-colors"
+                >
+                  Try Again
+                </button>
+              </div>
+            </div>
+          </div>
         </div>
       )}
 

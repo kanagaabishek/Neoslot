@@ -128,25 +128,31 @@ export default function AuctionMintPage() {
       addDebugLog("NFT minted successfully, now sending NFT to auction contract to start auction");
 
       // Step 2: Send NFT to auction contract to start auction
-      // Use your exact working format
+      // Calculate auction duration based on user input
+      const durationHours = parseInt(auctionDuration);
+      const durationNanoseconds = durationHours * 60 * 60 * 1000000000; // Convert hours to nanoseconds
+      
+      addDebugLog(`Auction duration: ${durationHours} hours = ${durationNanoseconds} nanoseconds`);
+
       const auctionMsg = {
         start_auction: {
           coin_denom: {
-            native_token: "uandr"
+            native_token: coinDenom
           },
           end_time: {
-            from_now: 604800 // Your exact working value (7 days)
+            from_now: durationNanoseconds // Use user's selected duration
           },
           recipient: {
             address: address
           },
           start_time: {
-            from_now: 120000 // Your exact working value (~33 hours)
+            from_now: 0 // Start immediately
           }
         }
       };
       
-      addDebugLog(`Creating auction with your exact working format: ${JSON.stringify(auctionMsg)}`);
+      addDebugLog(`Creating auction with calculated duration: ${JSON.stringify(auctionMsg)}`);
+      addDebugLog(`Duration details: ${durationHours} hours = ${durationNanoseconds} nanoseconds`);
 
       const sendNftMsg = {
         send_nft: {

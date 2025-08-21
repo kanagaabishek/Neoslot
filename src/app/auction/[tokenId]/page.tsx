@@ -182,12 +182,20 @@ export default function AuctionDetailsPage() {
       const nftInfo = await queryClient.queryContractSmart(cw721, metadataQuery);
       addDebugLog(`NFT metadata response: ${JSON.stringify(nftInfo)}`);
       
-      // Combine auction and metadata info
+      // Combine auction and metadata info with proper validation
+      const startTime = typeof auctionDetails.start_time === 'number' && isFinite(auctionDetails.start_time) 
+        ? auctionDetails.start_time 
+        : Date.now() / 1000; // Default to now if invalid
+      
+      const endTime = typeof auctionDetails.end_time === 'number' && isFinite(auctionDetails.end_time) 
+        ? auctionDetails.end_time 
+        : (Date.now() / 1000) + 86400; // Default to 24 hours from now if invalid
+      
       const auctionDetailsResult: AuctionDetails = {
         token_id: tokenId,
         seller: auctionDetails.seller || 'Unknown',
-        start_time: auctionDetails.start_time || 0,
-        end_time: auctionDetails.end_time || 0,
+        start_time: startTime,
+        end_time: endTime,
         min_bid: auctionDetails.min_bid?.amount || auctionDetails.min_bid || '0',
         highest_bid: auctionDetails.highest_bid ? {
           bidder: auctionDetails.highest_bid.bidder || 'Unknown',
@@ -207,8 +215,12 @@ export default function AuctionDetailsPage() {
       addDebugLog(`Final auction result: ${JSON.stringify({
         ...auctionDetailsResult,
         current_time: Date.now() / 1000,
-        start_time_formatted: new Date(auctionDetailsResult.start_time * 1000).toISOString(),
-        end_time_formatted: new Date(auctionDetailsResult.end_time * 1000).toISOString()
+        start_time_formatted: auctionDetailsResult.start_time > 0 
+          ? new Date(auctionDetailsResult.start_time * 1000).toISOString() 
+          : 'Invalid time',
+        end_time_formatted: auctionDetailsResult.end_time > 0 
+          ? new Date(auctionDetailsResult.end_time * 1000).toISOString() 
+          : 'Invalid time'
       })}`);
       
       setAuction(auctionDetailsResult);
@@ -233,13 +245,16 @@ export default function AuctionDetailsPage() {
       now,
       startTime,
       endTime,
-      cancelled: auctionInfo.cancelled
+      cancelled: auctionInfo.cancelled,
+      nowReadable: new Date(now * 1000).toISOString(),
+      startReadable: startTime > 0 ? new Date(startTime * 1000).toISOString() : 'Invalid',
+      endReadable: endTime > 0 ? new Date(endTime * 1000).toISOString() : 'Invalid'
     });
     
     if (auctionInfo.cancelled) return 'cancelled';
-    if (now < startTime) return 'active'; // Not started yet, but show as active for UI
-    if (now > endTime) return 'ended';
-    return 'active';
+    if (endTime > 0 && now > endTime) return 'ended';
+    if (startTime > 0 && now < startTime) return 'active'; // Not started but show as active for bidding UI
+    return 'active'; // Default to active if times are valid
   };
 
   // Place bid
@@ -382,10 +397,20 @@ export default function AuctionDetailsPage() {
   }, [tokenId, loadAuctionDetails]);
 
   const formatTimeRemaining = (endTime: number) => {
+    // Validate the endTime value
+    if (!endTime || endTime <= 0 || !isFinite(endTime)) {
+      return "Invalid time";
+    }
+    
     const now = Date.now() / 1000;
     const remaining = endTime - now;
     
     if (remaining <= 0) return "Auction ended";
+    
+    // Ensure remaining is a valid number
+    if (!isFinite(remaining)) {
+      return "Invalid time";
+    }
     
     const days = Math.floor(remaining / 86400);
     const hours = Math.floor((remaining % 86400) / 3600);
@@ -396,14 +421,36 @@ export default function AuctionDetailsPage() {
     return `${minutes}m remaining`;
   };
 
-  const canBid = auction && auction.status === 'active' && 
+  // Determine if user can bid (auction is active, not the seller, and within time bounds)
+  const canBid = auction && 
+                auction.status === 'active' && 
                 isConnected && 
                 address !== auction.seller &&
-                (Date.now() / 1000) < auction.end_time;
+                auction.end_time > 0 &&
+                auction.end_time > (Date.now() / 1000) &&
+                auction.start_time <= (Date.now() / 1000);
+  
+  // Add debug logging for bidding logic
+  if (auction) {
+    console.log('Bidding logic check:', {
+      status: auction.status,
+      isConnected,
+      isNotSeller: address !== auction.seller,
+      endTimeValid: auction.end_time > 0,
+      notExpired: auction.end_time > (Date.now() / 1000),
+      started: auction.start_time <= (Date.now() / 1000),
+      canBid,
+      currentTime: Date.now() / 1000,
+      endTime: auction.end_time,
+      startTime: auction.start_time
+    });
+  }
 
-  const canClaim = auction && auction.status === 'ended' && 
+  // Determine if user can claim (won the auction)
+  const canClaim = auction && 
+                  auction.status === 'ended' && 
                   auction.highest_bid && 
-                  address === auction.highest_bid.bidder;
+                  auction.highest_bid.bidder === address;
 
   if (!isConnected) {
     return <WalletPrompt />;

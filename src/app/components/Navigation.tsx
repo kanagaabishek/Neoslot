@@ -11,11 +11,12 @@ const Navigation: React.FC = () => {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   const navItems = [
-    { href: '/', label: 'Marketplace', icon: '🏠' },
-    { href: '/auction', label: 'Auctions', icon: '⚡' },
-    { href: '/mint', label: 'Mint NFT', icon: '🎨' },
-    { href: '/profile', label: 'Profile', icon: '👤' },
+    { href: '/', label: 'Marketplace', icon: '' },
+    { href: '/auction', label: 'Auctions', icon: '' },
+    { href: '/mint', label: 'Mint NFT', icon: '' },
+    { href: '/profile', label: 'Profile', icon: '' },
   ];
+  //🏠⚡🎨👤
 
   const WalletButton = ({ isMobile = false }: { isMobile?: boolean }) => {
     if (address) {

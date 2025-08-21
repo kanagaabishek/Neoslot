@@ -3,19 +3,21 @@
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { getQueryClient, getSigningClient } from '../utils/andrClient';
+import { setupKeplrChain } from '../utils/keplrChain';
 import WalletPrompt from '../components/WalletPrompt';
 import { useWallet } from '../hooks/useWallet';
 
 // Environment variables
 const cw721 = process.env.NEXT_PUBLIC_CW721_ADDRESS!;
 const marketplace = process.env.NEXT_PUBLIC_MARKETPLACE_ADDRESS!;
+const auctionContract = process.env.NEXT_PUBLIC_AUCTION_ADDRESS!;
 
 interface UserNFT {
   tokenId: string;
   name?: string;
   description?: string;
   image?: string;
-  metadata?: any;
+  metadata?: Record<string, unknown>;
   saleInfo?: {
     saleId: string;
     price: string;
@@ -45,6 +47,20 @@ export default function ProfilePage() {
     totalEarnings: "0"
   });
   const [activeTab, setActiveTab] = useState<'owned' | 'listed' | 'sold'>('owned');
+  
+  // Listing modal state
+  const [showListingModal, setShowListingModal] = useState(false);
+  const [selectedNFT, setSelectedNFT] = useState<UserNFT | null>(null);
+  const [listingPrice, setListingPrice] = useState('');
+  const [listingLoading, setListingLoading] = useState(false);
+  const [listingError, setListingError] = useState('');
+
+  // Auction modal state
+  const [showAuctionModal, setShowAuctionModal] = useState(false);
+  const [auctionMinBid, setAuctionMinBid] = useState('');
+  const [auctionDuration, setAuctionDuration] = useState('24'); // hours
+  const [auctionLoading, setAuctionLoading] = useState(false);
+  const [auctionError, setAuctionError] = useState('');
 
   const fetchUserNFTs = async () => {
     if (!isConnected || !address || typeof window === 'undefined') return;
@@ -78,7 +94,7 @@ export default function ProfilePage() {
             nft_info: { token_id: tokenId }
           });
 
-          let metadata: any = {};
+          let metadata: Record<string, unknown> = {};
           
           // Parse metadata
           if (tokenInfo.token_uri) {
@@ -195,6 +211,183 @@ export default function ProfilePage() {
 
   const handleNFTClick = (tokenId: string) => {
     router.push(`/nft/${tokenId}`);
+  };
+
+  // List NFT for sale function
+  const listNFTForSale = async () => {
+    if (!selectedNFT || !listingPrice || !isConnected || !address) return;
+    
+    setListingLoading(true);
+    setListingError('');
+    
+    try {
+      const rpc = process.env.NEXT_PUBLIC_RPC_URL || process.env.NEXT_PUBLIC_CHAIN_RPC!;
+      
+      // Setup Keplr chain and get signer
+      const offlineSigner = await setupKeplrChain();
+      const signingClient = await getSigningClient(rpc, offlineSigner);
+      
+      // Convert price to micro units (multiply by 1,000,000)
+      const priceInMicroUnits = Math.floor(parseFloat(listingPrice) * 1_000_000).toString();
+      
+      console.log('Listing NFT for sale:', {
+        tokenId: selectedNFT.tokenId,
+        price: priceInMicroUnits,
+        denom: 'uandr'
+      });
+      
+      // Step 1: Send NFT to marketplace contract
+      const sendNftMsg = {
+        send_nft: {
+          contract: marketplace,
+          token_id: selectedNFT.tokenId,
+          msg: btoa(JSON.stringify({
+            start_sale: {
+              price: priceInMicroUnits,
+              coin_denom: "uandr"
+            }
+          }))
+        }
+      };
+      
+      console.log('Sending NFT to marketplace:', sendNftMsg);
+      
+      const result = await signingClient.execute(
+        address,
+        cw721,
+        sendNftMsg,
+        "auto",
+        "Listing NFT for sale"
+      );
+      
+      console.log('NFT listed successfully:', result);
+      
+      // Close modal and refresh NFTs
+      setShowListingModal(false);
+      setSelectedNFT(null);
+      setListingPrice('');
+      
+      // Show success message
+      alert(`NFT #${selectedNFT.tokenId} listed for sale successfully!`);
+      
+      // Refresh the NFT list
+      await fetchUserNFTs();
+      
+    } catch (err) {
+      console.error("Error listing NFT:", err);
+      setListingError(`Failed to list NFT: ${err instanceof Error ? err.message : String(err)}`);
+    } finally {
+      setListingLoading(false);
+    }
+  };
+
+  // List NFT as auction function
+  const listNFTAsAuction = async () => {
+    if (!selectedNFT || !isConnected || !address) return;
+    
+    setAuctionLoading(true);
+    setAuctionError('');
+    
+    try {
+      const rpc = process.env.NEXT_PUBLIC_RPC_URL || process.env.NEXT_PUBLIC_CHAIN_RPC!;
+      
+      // Setup Keplr chain and get signer
+      const offlineSigner = await setupKeplrChain();
+      const signingClient = await getSigningClient(rpc, offlineSigner);
+      
+      console.log('Listing NFT for auction:', {
+        tokenId: selectedNFT.tokenId
+      });
+      
+      // Use your exact working format
+      const auctionMsg = {
+        start_auction: {
+          coin_denom: {
+            native_token: "uandr"
+          },
+          end_time: {
+            from_now: 604800 // Your exact working value (7 days)
+          },
+          recipient: {
+            address: address
+          },
+          start_time: {
+            from_now: 120000 // Your exact working value (~33 hours)
+          }
+        }
+      };
+      
+      console.log('Creating auction with your exact format:', auctionMsg);
+
+      const sendNftMsg = {
+        send_nft: {
+          contract: auctionContract,
+          token_id: selectedNFT.tokenId,
+          msg: btoa(JSON.stringify(auctionMsg))
+        }
+      };
+
+      console.log('Sending NFT to auction contract:', sendNftMsg);
+
+      const result = await signingClient.execute(
+        address,
+        cw721,
+        sendNftMsg,
+        "auto",
+        "Listing NFT for auction"
+      );
+      
+      console.log('NFT listed for auction successfully:', result);
+      
+      // Close modal and refresh NFTs
+      setShowAuctionModal(false);
+      setSelectedNFT(null);
+      setAuctionDuration('24');
+      
+      // Show success message
+      alert(`NFT #${selectedNFT.tokenId} listed for auction successfully!`);
+      
+      // Refresh the NFT list
+      await fetchUserNFTs();
+      
+    } catch (err) {
+      console.error("Error listing NFT for auction:", err);
+      setAuctionError(`Failed to list NFT for auction: ${err instanceof Error ? err.message : String(err)}`);
+    } finally {
+      setAuctionLoading(false);
+    }
+  };
+
+  // Open listing modal
+  const openListingModal = (nft: UserNFT) => {
+    setSelectedNFT(nft);
+    setListingPrice('');
+    setListingError('');
+    setShowListingModal(true);
+  };
+
+  // Open auction modal
+  const openAuctionModal = (nft: UserNFT) => {
+    setSelectedNFT(nft);
+    setAuctionDuration('24');
+    setAuctionError('');
+    setShowAuctionModal(true);
+  };
+
+  // Close listing modal
+  const closeListingModal = () => {
+    setShowListingModal(false);
+    setSelectedNFT(null);
+    setListingPrice('');
+    setListingError('');
+  };
+
+  // Close auction modal
+  const closeAuctionModal = () => {
+    setShowAuctionModal(false);
+    setSelectedNFT(null);
+    setAuctionDuration('24');
+    setAuctionError('');
   };
 
   if (!isConnected) {
@@ -460,10 +653,30 @@ export default function ProfilePage() {
                       </div>
                     </div>
                   ) : (
-                    <div className="text-center">
-                      <span className="px-3 py-1 bg-gray-100 text-gray-600 text-sm rounded">
+                    <div className="text-center space-y-2">
+                      <span className="px-3 py-1 bg-gray-100 text-gray-600 text-sm rounded block">
                         Not Listed
                       </span>
+                      <div className="space-y-1">
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation(); // Prevent NFT click event
+                            openListingModal(nft);
+                          }}
+                          className="w-full px-3 py-2 bg-black text-white text-sm font-medium rounded hover:bg-gray-800 transition-colors"
+                        >
+                          List for Sale
+                        </button>
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation(); // Prevent NFT click event
+                            openAuctionModal(nft);
+                          }}
+                          className="w-full px-3 py-2 bg-blue-600 text-white text-sm font-medium rounded hover:bg-blue-700 transition-colors"
+                        >
+                          List as Auction
+                        </button>
+                      </div>
                     </div>
                   )}
                 </div>
@@ -472,6 +685,215 @@ export default function ProfilePage() {
           </div>
         )}
       </div>
+
+      {/* Listing Modal */}
+      {showListingModal && (
+        <div className="fixed inset-0 flex items-center justify-center z-50">
+          {/* Modal Backdrop */}
+          <div 
+            className="absolute inset-0 bg-black bg-opacity-50"
+            onClick={closeListingModal}
+          ></div>
+          
+          {/* Modal Content */}
+          <div className="relative bg-white rounded-lg shadow-lg p-6 max-w-md w-full mx-4">
+            {/* Modal Header */}
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="text-lg font-semibold text-gray-800">
+                List NFT for Sale
+              </h3>
+              <button
+                onClick={closeListingModal}
+                className="text-gray-500 hover:text-gray-700"
+              >
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+
+            {/* Modal Body */}
+            <div className="space-y-4">
+              {selectedNFT && (
+                <div className="flex items-center space-x-3 p-3 bg-gray-50 rounded-lg">
+                  <div className="w-12 h-12 bg-gray-200 rounded">
+                    {selectedNFT.image ? (
+                      <img
+                        src={selectedNFT.image}
+                        alt={selectedNFT.name || `NFT ${selectedNFT.tokenId}`}
+                        className="w-full h-full object-cover rounded"
+                      />
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center text-gray-400">
+                        <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 20 20">
+                          <path fillRule="evenodd" d="M4 3a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V5a2 2 0 00-2-2H4zm12 12H4l4-8 3 6 2-4 3 6z" clipRule="evenodd" />
+                        </svg>
+                      </div>
+                    )}
+                  </div>
+                  <div>
+                    <p className="font-medium text-sm">{selectedNFT.name || `NFT #${selectedNFT.tokenId}`}</p>
+                    <p className="text-xs text-gray-500">Token ID: {selectedNFT.tokenId}</p>
+                  </div>
+                </div>
+              )}
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Listing Price (in ANDR)
+                </label>
+                <input
+                  type="number"
+                  step="0.000001"
+                  min="0"
+                  value={listingPrice}
+                  onChange={(e) => setListingPrice(e.target.value)}
+                  className="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-1 focus:ring-black focus:border-black"
+                  placeholder="Enter price in ANDR (e.g. 1.5)"
+                />
+                <p className="mt-1 text-xs text-gray-500">
+                  Minimum price: 0.000001 ANDR
+                </p>
+              </div>
+
+              {listingError && (
+                <div className="p-3 bg-red-50 border border-red-200 rounded-md">
+                  <p className="text-red-700 text-sm">
+                    {listingError}
+                  </p>
+                </div>
+              )}
+
+              {/* Modal Actions */}
+              <div className="flex justify-end space-x-3 pt-4">
+                <button
+                  onClick={closeListingModal}
+                  className="px-4 py-2 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300 transition-colors"
+                  disabled={listingLoading}
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={listNFTForSale}
+                  disabled={listingLoading || !listingPrice || parseFloat(listingPrice) <= 0}
+                  className="px-4 py-2 bg-black text-white rounded-md hover:bg-gray-800 transition-colors disabled:opacity-50"
+                >
+                  {listingLoading ? (
+                    <div className="flex items-center space-x-2">
+                      <div className="animate-spin w-4 h-4 border-2 border-white border-t-transparent rounded-full"></div>
+                      <span>Listing...</span>
+                    </div>
+                  ) : (
+                    'List NFT'
+                  )}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Auction Modal */}
+      {showAuctionModal && (
+        <div className="fixed inset-0 flex items-center justify-center z-50">
+          {/* Modal Backdrop */}
+          <div 
+            className="absolute inset-0 bg-black bg-opacity-50"
+            onClick={closeAuctionModal}
+          ></div>
+          
+          {/* Modal Content */}
+          <div className="relative bg-white rounded-lg shadow-lg p-6 max-w-md w-full mx-4">
+            {/* Modal Header */}
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="text-lg font-semibold text-gray-800">
+                List NFT for Auction
+              </h3>
+              <button
+                onClick={closeAuctionModal}
+                className="text-gray-500 hover:text-gray-700"
+              >
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+
+            {/* Modal Body */}
+            <div className="space-y-4">
+              {selectedNFT && (
+                <div className="flex items-center space-x-3 p-3 bg-gray-50 rounded-lg">
+                  <div className="w-12 h-12 bg-gray-200 rounded">
+                    {selectedNFT.image ? (
+                      <img
+                        src={selectedNFT.image}
+                        alt={selectedNFT.name || `NFT ${selectedNFT.tokenId}`}
+                        className="w-full h-full object-cover rounded"
+                      />
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center text-gray-400">
+                        <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 20 20">
+                          <path fillRule="evenodd" d="M4 3a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V5a2 2 0 00-2-2H4zm12 12H4l4-8 3 6 2-4 3 6z" clipRule="evenodd" />
+                        </svg>
+                      </div>
+                    )}
+                  </div>
+                  <div>
+                    <p className="font-medium text-sm">{selectedNFT.name || `NFT #${selectedNFT.tokenId}`}</p>
+                    <p className="text-xs text-gray-500">Token ID: {selectedNFT.tokenId}</p>
+                  </div>
+                </div>
+              )}
+
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                <div className="flex items-center space-x-2 mb-2">
+                  <svg className="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                  <span className="font-medium text-blue-800">Auction Details</span>
+                </div>
+                <p className="text-sm text-blue-700">
+                  This NFT will be listed for auction using your exact working format with a 7-day duration.
+                  The minimum bid is already set from when the NFT was minted.
+                </p>
+              </div>
+
+              {auctionError && (
+                <div className="p-3 bg-red-50 border border-red-200 rounded-md">
+                  <p className="text-red-700 text-sm">
+                    {auctionError}
+                  </p>
+                </div>
+              )}
+
+              {/* Modal Actions */}
+              <div className="flex justify-end space-x-3 pt-4">
+                <button
+                  onClick={closeAuctionModal}
+                  className="px-4 py-2 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300 transition-colors"
+                  disabled={auctionLoading}
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={listNFTAsAuction}
+                  disabled={auctionLoading}
+                  className="px-4 py-2 bg-black text-white rounded-md hover:bg-gray-800 transition-colors disabled:opacity-50"
+                >
+                  {auctionLoading ? (
+                    <div className="flex items-center space-x-2">
+                      <div className="animate-spin w-4 h-4 border-2 border-white border-t-transparent rounded-full"></div>
+                      <span>Listing...</span>
+                    </div>
+                  ) : (
+                    'List NFT as Auction'
+                  )}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

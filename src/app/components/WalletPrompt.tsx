@@ -65,7 +65,7 @@ const WalletPrompt: React.FC<WalletPromptProps> = ({
 
           {/* Help Text */}
           <p className="text-xs sm:text-sm text-gray-500 mt-4 sm:mt-6">
-            Don't have Keplr?{' '}
+            Don&apos;t have Keplr?{' '}
             <a
               href="https://www.keplr.app/"
               target="_blank"

@@ -14,9 +14,9 @@ interface SaleInfo {
   coin_denom: string;
   price: string;
   status: string;
-  start_time: any;
-  end_time: any;
-  recipient: any;
+  start_time: number;
+  end_time: number;
+  recipient: { address: string };
 }
 
 export default function MarketplaceViewer({ rpcUrl, marketplaceAddress, cw721Address }: MarketplaceViewerProps) {
