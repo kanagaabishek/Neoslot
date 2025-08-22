@@ -93,15 +93,23 @@ function AuctionCard({
   // Calculate minimum bid dynamically
   const getMinimumBid = () => {
     if (auction.highest_bid) {
-      const currentHighest = parseInt(auction.highest_bid.amount) / 1000000;
-      return (currentHighest + 0.000001).toFixed(6); // Add 1 micro ANDR
+      const currentHighest = parseInt(auction.highest_bid.amount);
+      if (isNaN(currentHighest)) {
+        return (parseInt(auction.min_bid) / 1000000).toFixed(6);
+      }
+      return ((currentHighest + 1) / 1000000).toFixed(6); // Add 1 micro ANDR
     }
-    return (parseInt(auction.min_bid) / 1000000).toFixed(6);
+    const minBid = parseInt(auction.min_bid);
+    if (isNaN(minBid)) return "0.000000";
+    return (minBid / 1000000).toFixed(6);
   };
 
   const getMinimumBidDisplay = () => {
     if (auction.highest_bid) {
       const currentHighest = parseInt(auction.highest_bid.amount);
+      if (isNaN(currentHighest)) {
+        return formatPrice(auction.min_bid);
+      }
       const increment = 1; // 1 micro ANDR
       return formatPrice((currentHighest + increment).toString());
     }

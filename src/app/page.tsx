@@ -201,7 +201,7 @@ export default function Home() {
         .map(result => result.value);
       
       console.log(`Successfully loaded ${validSales.length} out of ${salesPromises.length} sales`);
-      setNFTs(validSales);
+      setNFTs(validSales as NFTSale[]);
 
       // Show a warning if some sales failed to load
       if (validSales.length < salesPromises.length) {
