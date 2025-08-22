@@ -62,9 +62,7 @@ const nextConfig: NextConfig = {
               "style-src 'self' 'unsafe-inline'",
               "img-src 'self' data: https:",
               "font-src 'self' data:",
-              isDev
-                ? "connect-src 'self' https: http: wss: ws:"
-                : "connect-src 'self' https: wss: ws:",
+              "connect-src 'self' https: http://137.184.182.11:26657 wss: ws:",
               "frame-src 'none'",
               "object-src 'none'",
               "base-uri 'self'",

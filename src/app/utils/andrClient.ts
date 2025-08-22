@@ -1,14 +1,16 @@
 // utils/andrClient.ts
 import { OfflineSigner } from "@cosmjs/proto-signing";
 
+// Default RPC endpoint (working endpoint)
+const DEFAULT_RPC = "http://137.184.182.11:26657";
+
 // RPC endpoint configuration with multiple fallbacks
-const PRIMARY_RPC = process.env.NEXT_PUBLIC_RPC_URL || process.env.NEXT_PUBLIC_CHAIN_RPC!;
+const PRIMARY_RPC = process.env.NEXT_PUBLIC_RPC_URL || process.env.NEXT_PUBLIC_CHAIN_RPC || DEFAULT_RPC;
 const FALLBACK_ENDPOINTS = [
-  process.env.NEXT_PUBLIC_FALLBACK_RPC_1,
-  process.env.NEXT_PUBLIC_FALLBACK_RPC_2,
-  process.env.NEXT_PUBLIC_FALLBACK_RPC_3,
-  process.env.NEXT_PUBLIC_FALLBACK_RPC_4,
-  PRIMARY_RPC // Use primary as final fallback
+  process.env.NEXT_PUBLIC_FALLBACK_RPC_1 || DEFAULT_RPC,
+  process.env.NEXT_PUBLIC_FALLBACK_RPC_2 || DEFAULT_RPC,
+  process.env.NEXT_PUBLIC_FALLBACK_RPC_3 || DEFAULT_RPC,
+  process.env.NEXT_PUBLIC_FALLBACK_RPC_4 || DEFAULT_RPC,
 ].filter(Boolean) as string[];
 
 // Check if we're in production and on client side
@@ -103,15 +105,17 @@ export const getBestRpcEndpoint = async (): Promise<string> => {
 };
 
 export const getQueryClient = async (rpcUrl?: string) => {
+  let finalEndpoint = DEFAULT_RPC; // Default fallback
+  
   try {
     // Dynamic import to avoid SSR issues
     const { CosmWasmClient } = await import("@cosmjs/cosmwasm-stargate");
     
     // Use provided RPC or find the best available
-    const endpoint = rpcUrl || await getBestRpcEndpoint();
+    finalEndpoint = rpcUrl || await getBestRpcEndpoint();
     
     // If using proxy endpoint, create a custom client
-    if (endpoint === '/api/rpc-proxy') {
+    if (finalEndpoint === '/api/rpc-proxy') {
       console.log("Creating proxy-based query client");
       // For proxy, we'll create a basic client that uses our primary RPC
       // This is a workaround for production deployment issues
@@ -120,30 +124,24 @@ export const getQueryClient = async (rpcUrl?: string) => {
       return client;
     }
     
-    console.log("Connecting to RPC:", endpoint);
-    const client = await CosmWasmClient.connect(endpoint);
+    console.log("Connecting to RPC:", finalEndpoint);
+    const client = await CosmWasmClient.connect(finalEndpoint);
     console.log("Query client connected successfully");
     return client;
   } catch (error) {
     console.error("Failed to connect query client:", error);
     
-    // If all else fails, try a direct connection to primary RPC
+    // If all else fails, try a direct connection to default RPC
     try {
-      console.log("⚠️ Falling back to direct primary RPC connection...");
+      console.log("⚠️ Falling back to default RPC connection:", DEFAULT_RPC);
       const { CosmWasmClient } = await import("@cosmjs/cosmwasm-stargate");
-      const client = await CosmWasmClient.connect(PRIMARY_RPC);
+      const client = await CosmWasmClient.connect(DEFAULT_RPC);
       console.log("✅ Fallback connection successful");
       return client;
     } catch (fallbackError) {
       console.error("❌ Even fallback connection failed:", fallbackError);
+      throw new Error(`Failed to connect to blockchain network. Tried endpoints: ${finalEndpoint}, ${DEFAULT_RPC}. This may be due to network connectivity issues or RPC endpoints being unavailable.`);
     }
-    
-    // Provide more helpful error messages
-    if (error instanceof Error && error.message.includes('Failed to connect to any RPC endpoint')) {
-      throw new Error(`Failed to connect to blockchain network. This may be due to:\n• Network connectivity issues\n• RPC endpoints being temporarily unavailable\n• Firewall blocking HTTP requests (try using HTTPS endpoints in production)\n\nPlease try again in a few moments.`);
-    }
-    
-    throw new Error(`Failed to connect to RPC endpoint: ${rpcUrl}. ${error instanceof Error ? error.message : 'Unknown error'}`);
   }
 };
 
@@ -176,6 +174,7 @@ export const getSigningClient = async (rpcUrl: string, wallet: OfflineSigner) =>
     return client;
   } catch (error) {
     console.error("Failed to connect signing client:", error);
-    throw new Error(`Failed to connect to RPC endpoint: ${rpcUrl}. ${error instanceof Error ? error.message : 'Unknown error'}`);
+    const finalEndpoint = rpcUrl || DEFAULT_RPC;
+    throw new Error(`Failed to connect to RPC endpoint: ${finalEndpoint}. ${error instanceof Error ? error.message : 'Unknown error'}`);
   }
 };
