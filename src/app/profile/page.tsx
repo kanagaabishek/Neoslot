@@ -69,8 +69,8 @@ export default function ProfilePage() {
       setLoading(true);
       setError("");
       
-      const rpc = process.env.NEXT_PUBLIC_CHAIN_RPC!;
-      const client = await getQueryClient(rpc);
+      // Use automatic fallback logic - don't pass specific RPC URL
+      const client = await getQueryClient();
 
       // Get all tokens owned by user
       console.log('Fetching NFTs for user:', address);

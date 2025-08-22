@@ -85,8 +85,8 @@ export default function AuctionDetailsPage() {
     addDebugLog(`Loading auction details for token: ${tokenId}`);
 
     try {
-      const rpc = process.env.NEXT_PUBLIC_RPC_URL || process.env.NEXT_PUBLIC_CHAIN_RPC || 'https://rpc.testnet.andromedaprotocol.io';
-      const queryClient = await getQueryClient(rpc);
+      // Use automatic fallback logic - don't pass specific RPC URL
+      const queryClient = await getQueryClient();
       
       // Try multiple approaches to find the auction
       let auctionDetails = null;

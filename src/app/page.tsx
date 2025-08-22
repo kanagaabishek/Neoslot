@@ -62,22 +62,19 @@ export default function Home() {
       
       rpc = process.env.NEXT_PUBLIC_RPC_URL || process.env.NEXT_PUBLIC_CHAIN_RPC!;
       
-      if (!rpc) {
-        throw new Error('No RPC URL configured. Please check your environment variables.');
-      }
-      
-      console.log(`Connecting to RPC: ${rpc}`);
+      console.log('Attempting to connect to RPC endpoint...');
       
       let client;
       try {
-        client = await getQueryClient(rpc);
+        // Use automatic fallback logic - don't pass specific RPC URL
+        client = await getQueryClient();
         if (!client) {
           throw new Error('Failed to create query client');
         }
         console.log('Successfully connected to RPC');
       } catch (rpcError) {
         console.error('RPC connection failed:', rpcError);
-        throw new Error(`Failed to connect to RPC endpoint: ${rpc}. Please check your network connection.`);
+        throw new Error(`Failed to connect to RPC endpoint. Please check your network connection. ${rpcError instanceof Error ? rpcError.message : ''}`);
       }
 
       // Get all sales for our CW721 contract using sale_infos_for_address

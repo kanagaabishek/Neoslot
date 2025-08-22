@@ -29,7 +29,8 @@ export default function MarketplaceViewer({ rpcUrl, marketplaceAddress, cw721Add
     setError("");
     
     try {
-      const client = await getQueryClient(rpcUrl);
+      // Use automatic fallback logic - don't pass specific RPC URL
+      const client = await getQueryClient();
       const salesData: SaleInfo[] = [];
       
       // Try to query sale IDs 1 through 10

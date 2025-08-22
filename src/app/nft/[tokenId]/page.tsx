@@ -50,8 +50,8 @@ export default function NFTDetailPage() {
       setLoading(true);
       setError("");
       
-      const rpc = process.env.NEXT_PUBLIC_CHAIN_RPC!;
-      const client = await getQueryClient(rpc);
+      // Use automatic fallback logic - don't pass specific RPC URL
+      const client = await getQueryClient();
 
       // Get NFT info from CW721 contract
       console.log('Fetching NFT details for token:', tokenId);
