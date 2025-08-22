@@ -76,15 +76,6 @@ export const testProxyConnectivity = async (): Promise<boolean> => {
 export const getBestRpcEndpoint = async (): Promise<string> => {
   console.log("🔍 Testing RPC endpoints for best connectivity...");
   
-  // In production, try proxy first to avoid CORS issues
-  if (isProduction && isClient) {
-    console.log("🔄 Production mode: Testing proxy endpoint first...");
-    if (await testProxyConnectivity()) {
-      console.log("✅ Using RPC proxy for production");
-      return '/api/rpc-proxy';
-    }
-  }
-  
   // Test primary endpoint first
   if (await testRpcConnectivity(PRIMARY_RPC)) {
     console.log("✅ Using primary RPC:", PRIMARY_RPC);
@@ -100,8 +91,9 @@ export const getBestRpcEndpoint = async (): Promise<string> => {
     }
   }
   
-  // If all fail, throw a detailed error
-  throw new Error(`🚫 Failed to connect to any RPC endpoint. Tried:\n${[PRIMARY_RPC, ...FALLBACK_ENDPOINTS].map(ep => `• ${ep}`).join('\n')}\n\nThis may be due to:\n• Network connectivity issues\n• All RPC endpoints being temporarily unavailable\n• Deployment platform blocking HTTP requests\n• Firewall restrictions\n\nPlease try again later or contact support.`);
+  // If all fail, return default RPC as last resort
+  console.log("⚠️ All endpoints failed, using default as last resort");
+  return DEFAULT_RPC;
 };
 
 export const getQueryClient = async (rpcUrl?: string) => {
@@ -111,23 +103,23 @@ export const getQueryClient = async (rpcUrl?: string) => {
     // Dynamic import to avoid SSR issues
     const { CosmWasmClient } = await import("@cosmjs/cosmwasm-stargate");
     
-    // Use provided RPC or find the best available
-    finalEndpoint = rpcUrl || await getBestRpcEndpoint();
-    
-    // If using proxy endpoint, create a custom client
-    if (finalEndpoint === '/api/rpc-proxy') {
-      console.log("Creating proxy-based query client");
-      // For proxy, we'll create a basic client that uses our primary RPC
-      // This is a workaround for production deployment issues
-      const client = await CosmWasmClient.connect(PRIMARY_RPC);
-      console.log("Proxy-based query client connected successfully");
-      return client;
+    // Use provided RPC or try to find the best available
+    if (rpcUrl) {
+      finalEndpoint = rpcUrl;
+    } else {
+      try {
+        finalEndpoint = await getBestRpcEndpoint();
+      } catch (endpointError) {
+        console.warn("Could not find best endpoint, using default:", DEFAULT_RPC);
+        finalEndpoint = DEFAULT_RPC;
+      }
     }
     
     console.log("Connecting to RPC:", finalEndpoint);
     const client = await CosmWasmClient.connect(finalEndpoint);
-    console.log("Query client connected successfully");
+    console.log("✅ Query client connected successfully");
     return client;
+    
   } catch (error) {
     console.error("Failed to connect query client:", error);
     
