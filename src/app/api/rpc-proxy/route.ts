@@ -1,68 +1,54 @@
-// Next.js API route to proxy RPC requests for production
-// This helps bypass CORS and mixed content issues
-
-import { NextRequest, NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from "next/server";
 
 const RPC_ENDPOINTS = [
   process.env.NEXT_PUBLIC_RPC_URL || "http://137.184.182.11:26657",
-  "http://137.184.182.11:26657"
 ];
 
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { method, path, data } = body;
-    
-    // Try each RPC endpoint
+
     for (const endpoint of RPC_ENDPOINTS) {
       try {
-        const rpcUrl = `${endpoint}${path || '/status'}`;
-        console.log(`Proxying request to: ${rpcUrl}`);
-        
-        const response = await fetch(rpcUrl, {
-          method: method || 'GET',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: data ? JSON.stringify(data) : undefined,
-          signal: AbortSignal.timeout(10000) // 10 second timeout
-        });
-        
-        if (!response.ok) {
-          console.warn(`RPC endpoint ${endpoint} returned ${response.status}`);
-          continue;
+        let response;
+        if (body.jsonrpc) {
+          // JSON-RPC request
+          response = await fetch(endpoint, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(body),
+            signal: AbortSignal.timeout(10000),
+          });
+        } else {
+          // REST-style request
+          const { path = "/status" } = body;
+          const rpcUrl = `${endpoint}${path}`;
+          response = await fetch(rpcUrl, {
+            method: "GET",
+            signal: AbortSignal.timeout(10000),
+          });
         }
-        
+
+        if (!response.ok) continue;
+
         const result = await response.json();
         return NextResponse.json(result);
-        
-      } catch (error) {
-        console.warn(`RPC endpoint ${endpoint} failed:`, error);
+      } catch (err) {
+        console.warn(`RPC endpoint ${endpoint} failed:`, err);
         continue;
       }
     }
-    
+
     return NextResponse.json(
-      { 
-        error: 'All RPC endpoints failed',
-        message: 'Unable to connect to blockchain network. Please try again later.',
-        endpoints_tried: RPC_ENDPOINTS
-      },
+      { error: "All RPC endpoints failed", endpoints: RPC_ENDPOINTS },
       { status: 503 }
     );
-    
-  } catch (error) {
-    console.error('Proxy error:', error);
+  } catch (err) {
     return NextResponse.json(
-      { 
-        error: 'Proxy server error', 
-        message: error instanceof Error ? error.message : 'Unknown error'
-      },
+      { error: "Proxy server error", message: String(err) },
       { status: 500 }
     );
   }
 }
 
-export async function GET(request: NextRequest) {
-  return POST(request);
-}
+export const GET = POST;
