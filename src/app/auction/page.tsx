@@ -171,14 +171,14 @@ function AuctionCard({
             </div>
           )}
           
-          {/* <div className="flex justify-between text-sm">
+          <div className="flex justify-between text-sm">
             <span className="text-gray-500">Time:</span>
             <span className={`font-medium ${
               isActive ? 'text-green-600' : 'text-red-600'
             }`}>
               {timeRemaining}
             </span>
-          </div> */}
+          </div>
         </div>
 
         {/* Bidding Section */}
