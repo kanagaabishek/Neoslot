@@ -39,7 +39,8 @@ interface AuctionCardProps {
   loading: boolean;
   router: ReturnType<typeof useRouter>;
   formatPrice: (price: string) => string;
-  formatTime: (timestamp: number) => string;
+  formatTime: (timestamp: number, currentTime?: number) => string;
+  determineStatus: (auction: AuctionNFT, currentTime?: number) => 'active' | 'ended' | 'cancelled';
 }
 
 function AuctionCard({ 
@@ -48,9 +49,20 @@ function AuctionCard({
   loading,
   router,
   formatPrice,
-  formatTime 
+  formatTime,
+  determineStatus
 }: AuctionCardProps) {
   const [bidAmount, setBidAmount] = useState("");
+  const [currentTime, setCurrentTime] = useState(Date.now() / 1000);
+
+  // Update current time every second for dynamic countdown
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setCurrentTime(Date.now() / 1000);
+    }, 1000);
+
+    return () => clearInterval(interval);
+  }, []);
 
   const handleCardClick = () => {
     router.push(`/auction/${auction.token_id}`);
@@ -65,8 +77,36 @@ function AuctionCard({
     }
   };
 
-  const isActive = auction.status === 'active';
-  const timeRemaining = isActive ? formatTime(auction.end_time) : 'Auction ended';
+  // Use dynamic status determination
+  const currentStatus = determineStatus(auction, currentTime);
+  console.log('AuctionCard status check:', {
+    tokenId: auction.token_id,
+    currentTime,
+    startTime: auction.start_time,
+    endTime: auction.end_time,
+    currentStatus,
+    staticStatus: auction.status
+  });
+  const isActive = currentStatus === 'active';
+  const timeRemaining = formatTime(auction.end_time, currentTime);
+  
+  // Calculate minimum bid dynamically
+  const getMinimumBid = () => {
+    if (auction.highest_bid) {
+      const currentHighest = parseInt(auction.highest_bid.amount) / 1000000;
+      return (currentHighest + 0.000001).toFixed(6); // Add 1 micro ANDR
+    }
+    return (parseInt(auction.min_bid) / 1000000).toFixed(6);
+  };
+
+  const getMinimumBidDisplay = () => {
+    if (auction.highest_bid) {
+      const currentHighest = parseInt(auction.highest_bid.amount);
+      const increment = 1; // 1 micro ANDR
+      return formatPrice((currentHighest + increment).toString());
+    }
+    return formatPrice(auction.min_bid);
+  };
 
   return (
     <div 
@@ -89,11 +129,12 @@ function AuctionCard({
         
         {/* Status Badge */}
         <div className={`absolute top-3 left-3 px-2 py-1 rounded-full text-xs font-medium ${
-          auction.status === 'active' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
-          // auction.status === 'ended' ?  :
+          currentStatus === 'ended' ? 'bg-green-100 text-green-800' :'bg-red-100 text-red-800'
           // 'bg-gray-100 text-gray-800'
         }`}>
-          {auction.status.toUpperCase()}
+          {currentStatus === 'active' ? 'ACTIVE' :
+           currentStatus === 'ended' ? 'ACTIVE' :
+           'CANCELLED'}
         </div>
 
         {/* Event Type Badge */}
@@ -117,27 +158,27 @@ function AuctionCard({
         {/* Auction Details */}
         <div className="space-y-2 mb-4">
           <div className="flex justify-between text-sm">
-            <span className="text-gray-500">Min Bid:</span>
-            <span className="font-medium text-black">{formatPrice(auction.min_bid)}</span>
+            <span className="text-gray-500">Next Min Bid:</span>
+            <span className="font-medium text-black">{getMinimumBidDisplay()}</span>
           </div>
           
           {auction.highest_bid && (
             <div className="flex justify-between text-sm">
-              <span className="text-gray-500">Highest Bid:</span>
+              <span className="text-gray-500">Current Highest:</span>
               <span className="font-medium text-green-600">
                 {formatPrice(auction.highest_bid.amount)}
               </span>
             </div>
           )}
           
-          <div className="flex justify-between text-sm">
+          {/* <div className="flex justify-between text-sm">
             <span className="text-gray-500">Time:</span>
             <span className={`font-medium ${
-              auction.status === 'active' ? 'text-green-600' : 'text-red-600'
+              isActive ? 'text-green-600' : 'text-red-600'
             }`}>
               {timeRemaining}
             </span>
-          </div>
+          </div> */}
         </div>
 
         {/* Bidding Section */}
@@ -147,12 +188,12 @@ function AuctionCard({
               <input
                 type="number"
                 step="0.000001"
-                min="0"
+                min={getMinimumBid()}
                 value={bidAmount}
                 onChange={(e) => setBidAmount(e.target.value)}
                 onClick={(e) => e.stopPropagation()}
                 className="flex-1 px-3 py-2 bg-white border border-gray-300 rounded-lg text-sm text-black focus:outline-none focus:ring-2 focus:ring-black focus:border-black"
-                placeholder="Bid amount"
+                placeholder={`Min: ${getMinimumBid()}`}
               />
               <button
                 onClick={handleBidClick}
@@ -176,10 +217,21 @@ export default function AuctionPage() {
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
   const [auctions, setAuctions] = useState<AuctionNFT[]>([]);
+  const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'ended' | 'cancelled'>('all');
+  const [currentTime, setCurrentTime] = useState(Date.now() / 1000);
   
   // Debug panel states
   const [debugLogs, setDebugLogs] = useState<string[]>([]);
   const [showDebug, setShowDebug] = useState(false);
+
+  // Update current time every second for real-time updates
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setCurrentTime(Date.now() / 1000);
+    }, 1000);
+
+    return () => clearInterval(interval);
+  }, []);
   
   const addDebugLog = (message: string) => {
     setDebugLogs(prev => [...prev, message]);
@@ -250,13 +302,28 @@ export default function AuctionPage() {
             return {
               ...auctionDetails,
               metadata,
-              status: determineAuctionStatus(auctionDetails)
+              status: determineAuctionStatus(auctionDetails),
+              // Preserve original time values for proper processing in determineAuctionStatus
+              start_time: auctionDetails.start_time || auction.start_time || 0,
+              end_time: auctionDetails.end_time || auction.end_time || 0,
+              token_id: auctionDetails.token_id || auction.token_id || 'unknown',
+              seller: auctionDetails.seller || auction.seller || 'unknown',
+              min_bid: auctionDetails.min_bid || auction.min_bid || '0',
+              highest_bid: auctionDetails.highest_bid || auction.highest_bid,
+              coin_denom: auctionDetails.coin_denom || auction.coin_denom || 'uandr'
             };
           } catch (err) {
             addDebugLog(`Error loading auction details: ${err}`);
             return {
               ...auction,
-              status: determineAuctionStatus(auction)
+              status: determineAuctionStatus(auction),
+              // Preserve original time values for proper processing in determineAuctionStatus
+              start_time: auction.start_time || 0,
+              end_time: auction.end_time || 0,
+              token_id: auction.token_id || 'unknown',
+              seller: auction.seller || 'unknown',
+              min_bid: auction.min_bid || '0',
+              coin_denom: auction.coin_denom || 'uandr'
             };
           }
         })
@@ -275,22 +342,62 @@ export default function AuctionPage() {
     }
   }, []);
 
-  const determineAuctionStatus = (auction: Record<string, unknown>): 'active' | 'ended' | 'cancelled' => {
-    const now = Date.now() / 1000;
-    const startTime = typeof auction.start_time === 'number' ? auction.start_time : 0;
-    const endTime = typeof auction.end_time === 'number' ? auction.end_time : 0;
+  const determineAuctionStatus = (auction: AuctionNFT | Record<string, unknown>, currentTime?: number): 'active' | 'ended' | 'cancelled' => {
+    const now = currentTime || Date.now() / 1000;
     
-    console.log('Status determination (listing page):', {
+    // Handle different time formats from blockchain
+    let startTime = 0;
+    let endTime = 0;
+    
+    // Convert start_time to number and normalize
+    if (typeof auction.start_time === 'number') {
+      startTime = auction.start_time;
+    } else if (typeof auction.start_time === 'string' && auction.start_time !== '') {
+      startTime = parseFloat(auction.start_time);
+    }
+    
+    // Convert end_time to number and normalize  
+    if (typeof auction.end_time === 'number') {
+      endTime = auction.end_time;
+    } else if (typeof auction.end_time === 'string' && auction.end_time !== '') {
+      endTime = parseFloat(auction.end_time);
+    }
+    
+    // Normalize timestamps if they're in milliseconds or nanoseconds
+    if (startTime > 1000000000000) { // Larger than year 2001 in milliseconds
+      if (startTime > 1000000000000000) { // Nanoseconds
+        startTime = startTime / 1000000000;
+        endTime = endTime / 1000000000;
+      } else { // Milliseconds
+        startTime = startTime / 1000;
+        endTime = endTime / 1000;
+      }
+    }
+    
+    const cancelled = 'cancelled' in auction ? auction.cancelled : false;
+    
+    console.log('determineAuctionStatus called:', {
+      tokenId: auction.token_id || 'unknown',
       now,
-      startTime,
-      endTime,
-      cancelled: auction.cancelled
+      originalStartTime: auction.start_time,
+      originalEndTime: auction.end_time,
+      normalizedStartTime: startTime,
+      normalizedEndTime: endTime,
+      cancelled,
+      nowReadable: new Date(now * 1000).toISOString(),
+      startReadable: startTime > 0 ? new Date(startTime * 1000).toISOString() : 'Invalid',
+      endReadable: endTime > 0 ? new Date(endTime * 1000).toISOString() : 'Invalid'
     });
     
-    if (auction.cancelled) return 'cancelled';
-    if (now < startTime) return 'active'; // Not started yet, but show as active for UI
-    if (now > endTime) return 'ended';
-    return 'active';
+    if (cancelled) return 'cancelled';
+    if (endTime > 0 && now > endTime) return 'ended';
+    if (startTime > 0 && endTime > 0 && now >= startTime && now <= endTime) return 'active';
+    if (startTime > 0 && now < startTime) return 'active'; // Not started yet, but allow bidding
+    
+    // If times are invalid or zero, default to ended for safety
+    const result = endTime > 0 ? 'active' : 'ended';
+    console.log('Status determination result:', result);
+    return result;
   };
 
   // Handle bidding from card
@@ -359,19 +466,21 @@ export default function AuctionPage() {
     return `${priceNum.toFixed(6)} ANDR`;
   };
 
-  const formatTimeRemaining = (endTime: number) => {
-    const now = Date.now() / 1000;
-    const remaining = endTime - now;
+  const formatTimeRemaining = (endTime: number, currentTime?: number) => {
+    const now = currentTime || Date.now() / 1000;
+    const remaining = endTime;
     
     if (remaining <= 0) return "Ended";
     
     const days = Math.floor(remaining / 86400);
     const hours = Math.floor((remaining % 86400) / 3600);
     const minutes = Math.floor((remaining % 3600) / 60);
+    const seconds = Math.floor(remaining % 60);
     
-    if (days > 0) return `${days}d ${hours}h`;
+    if (days > 0) return `${days}d ${hours}h ${minutes}m`;
     if (hours > 0) return `${hours}h ${minutes}m`;
-    return `${minutes}m`;
+    if (minutes > 0) return `${minutes}m ${seconds}s`;
+    return `${seconds}s`;
   };
 
   useEffect(() => {
@@ -379,6 +488,21 @@ export default function AuctionPage() {
       loadAuctions();
     }
   }, [isConnected, loadAuctions]);
+
+  // Filter auctions based on selected status (dynamic)
+  const filteredAuctions = auctions.filter(auction => {
+    if (statusFilter === 'all') return true;
+    const currentStatus = determineAuctionStatus(auction, currentTime);
+    return currentStatus === statusFilter;
+  });
+
+  // Get counts for each status (dynamic)
+  const statusCounts = {
+    all: auctions.length,
+    active: auctions.filter(a => determineAuctionStatus(a, currentTime) === 'active').length,
+    ended: auctions.filter(a => determineAuctionStatus(a, currentTime) === 'ended').length,
+    cancelled: auctions.filter(a => determineAuctionStatus(a, currentTime) === 'cancelled').length
+  };
 
   if (!isConnected) {
     return <WalletPrompt />;
@@ -388,15 +512,54 @@ export default function AuctionPage() {
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100">
       <div className="max-w-7xl mx-auto px-4 py-8">
         <div className="mb-8">
-          <h1 className="text-4xl font-bold text-black mb-4">🏷️ Live Auctions</h1>
-          <p className="text-gray-600">Bid on exclusive NFTs and events</p>
-          <div className="mt-4">
+          <div className="flex flex-col sm:flex-row justify-between items-start mb-4 gap-4">
+            <div>
+              <h1 className="text-4xl font-bold text-black mb-2">Live Auctions</h1>
+              <p className="text-gray-600">
+                {statusFilter === 'all' 
+                  ? `${auctions.length} total auctions available`
+                  : `${filteredAuctions.length} ${statusFilter} auctions of ${auctions.length} total`
+                }
+              </p>
+            </div>
             <button 
               onClick={() => router.push('/auction/mint')}
-              className="bg-black text-white px-6 py-3 rounded-lg font-medium hover:bg-gray-800 transition-all"
+              className="bg-black text-white px-6 py-3 rounded-lg font-medium hover:bg-gray-800 transition-all whitespace-nowrap"
             >
               Create Auction
             </button>
+          </div>
+          
+          {/* Filter Tabs */}
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="text-gray-700 font-medium mr-2 hidden sm:block">Filter:</span>
+            {[
+              { key: 'all', label: 'All Auctions', icon: '🏷️', shortLabel: 'All' },
+              { key: 'active', label: 'Active', icon: '🟢', shortLabel: 'Active' },
+              { key: 'ended', label: 'Ended', icon: '🔴', shortLabel: 'Ended' },
+              { key: 'cancelled', label: 'Cancelled', icon: '⏸️', shortLabel: 'Cancelled' }
+            ].map(({ key, label, icon, shortLabel }) => (
+              <button
+                key={key}
+                onClick={() => setStatusFilter(key as typeof statusFilter)}
+                className={`flex items-center gap-2 px-3 sm:px-4 py-2 rounded-lg font-medium transition-all ${
+                  statusFilter === key
+                    ? 'bg-black text-white shadow-lg'
+                    : 'bg-white text-gray-600 hover:bg-gray-50 border border-gray-200'
+                }`}
+              >
+                {/* <span>{icon}</span> */}
+                <span className="hidden sm:inline">{label}</span>
+                <span className="sm:hidden">{shortLabel}</span>
+                <span className={`text-xs px-2 py-1 rounded-full ${
+                  statusFilter === key 
+                    ? 'bg-white/20 text-white' 
+                    : 'bg-gray-100 text-gray-600'
+                }`}>
+                  {statusCounts[key as keyof typeof statusCounts]}
+                </span>
+              </button>
+            ))}
           </div>
         </div>
 
@@ -423,19 +586,33 @@ export default function AuctionPage() {
         </div>
 
         {/* Auctions Grid */}
-        {auctions.length === 0 ? (
+        {filteredAuctions.length === 0 ? (
           <div className="text-center py-12">
-            <div className="text-gray-600 text-lg mb-4">No active auctions found</div>
-            <button
-              onClick={() => router.push('/auction/mint')}
-              className="bg-black text-white px-6 py-3 rounded-lg font-medium hover:bg-gray-800 transition-all"
-            >
-              Create First Auction
-            </button>
+            <div className="text-gray-600 text-lg mb-4">
+              {auctions.length === 0 
+                ? "No auctions found"
+                : `No ${statusFilter === 'all' ? '' : statusFilter} auctions found`
+              }
+            </div>
+            {auctions.length === 0 ? (
+              <button
+                onClick={() => router.push('/auction/mint')}
+                className="bg-black text-white px-6 py-3 rounded-lg font-medium hover:bg-gray-800 transition-all"
+              >
+                Create First Auction
+              </button>
+            ) : (
+              <button
+                onClick={() => setStatusFilter('all')}
+                className="bg-gray-600 text-white px-6 py-3 rounded-lg font-medium hover:bg-gray-700 transition-all"
+              >
+                Show All Auctions
+              </button>
+            )}
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {auctions.map((auction) => (
+            {filteredAuctions.map((auction) => (
               <AuctionCard
                 key={auction.token_id}
                 auction={auction}
@@ -444,6 +621,7 @@ export default function AuctionPage() {
                 formatPrice={formatPrice}
                 formatTime={formatTimeRemaining}
                 router={router}
+                determineStatus={determineAuctionStatus}
               />
             ))}
           </div>

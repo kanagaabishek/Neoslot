@@ -127,32 +127,44 @@ export default function AuctionMintPage() {
       addDebugLog(`Mint result: ${stringifyTransactionResult(mintResult)}`);
       addDebugLog("NFT minted successfully, now sending NFT to auction contract to start auction");
 
+      // Calculate min bid amount in micro units
+      const minBidAmount = Math.floor(parseFloat(minBid) * 1000000);
+      addDebugLog(`Min bid: ${minBid} ${coinDenom} = ${minBidAmount} micro units`);
+
       // Step 2: Send NFT to auction contract to start auction
-      // Calculate auction duration based on user input
+      // Calculate auction duration and times
       const durationHours = parseInt(auctionDuration);
-      const durationNanoseconds = durationHours * 60 * 60 * 1000000000; // Convert hours to nanoseconds
       
-      addDebugLog(`Auction duration: ${durationHours} hours = ${durationNanoseconds} nanoseconds`);
+      // Calculate times in seconds (not nanoseconds like the previous attempts)
+      const nowSeconds = Math.floor(Date.now() / 1000);
+      const startBufferSeconds = 120; // 2 minutes buffer to avoid "start time in past" error
+      const startTimeSeconds = nowSeconds + startBufferSeconds;
+      const endTimeSeconds = startTimeSeconds + (durationHours * 60 * 60);
+      
+      addDebugLog(`Current time: ${nowSeconds} seconds (${new Date(nowSeconds * 1000).toISOString()})`);
+      addDebugLog(`Auction start time: ${startTimeSeconds} seconds (${new Date(startTimeSeconds * 1000).toISOString()})`);
+      addDebugLog(`Auction end time: ${endTimeSeconds} seconds (${new Date(endTimeSeconds * 1000).toISOString()})`);
+      addDebugLog(`Auction duration: ${durationHours} hours`);
 
       const auctionMsg = {
         start_auction: {
-          coin_denom: {
-            native_token: coinDenom
+          start_time: { 
+            at_time: startTimeSeconds.toString() 
           },
-          end_time: {
-            from_now: durationNanoseconds // Use user's selected duration
+          end_time: { 
+            at_time: endTimeSeconds.toString() 
           },
-          recipient: {
-            address: address
+          min_bid: {
+            amount: minBidAmount.toString(),
+            denom: coinDenom
           },
-          start_time: {
-            from_now: 0 // Start immediately
-          }
+          coin_denom: coinDenom,
+          recipient: null
         }
       };
       
       addDebugLog(`Creating auction with calculated duration: ${JSON.stringify(auctionMsg)}`);
-      addDebugLog(`Duration details: ${durationHours} hours = ${durationNanoseconds} nanoseconds`);
+      addDebugLog(`Duration details: ${durationHours} hours from ${startTimeSeconds} to ${endTimeSeconds}`);
 
       const sendNftMsg = {
         send_nft: {
