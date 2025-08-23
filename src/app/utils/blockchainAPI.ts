@@ -14,16 +14,29 @@ class BlockchainAPI {
         body: JSON.stringify({ type, params }),
       });
 
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error(`Client: Server responded with ${response.status}: ${errorText}`);
+        throw new Error(`Server error (${response.status}): ${errorText}`);
+      }
+
       const result = await response.json();
       
       if (!result.success) {
-        throw new Error(result.error || 'Server request failed');
+        const errorMsg = result.error || 'Unknown server error';
+        console.error(`Client: Server API error:`, errorMsg);
+        throw new Error(`Failed to fetch NFTs: ${errorMsg}. Please check your network connection.`);
       }
 
       console.log(`Client: ${type} request successful`);
       return result.data;
     } catch (error) {
       console.error(`Client: ${type} request failed:`, error);
+      
+      if (error instanceof TypeError && error.message.includes('fetch')) {
+        throw new Error('Failed to connect to server. Please check your internet connection.');
+      }
+      
       throw error;
     }
   }

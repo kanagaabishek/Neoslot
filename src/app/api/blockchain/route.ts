@@ -65,22 +65,25 @@ export async function POST(request: NextRequest) {
               sale_state: { sale_id: i.toString() }
             });
             
-            // Get NFT metadata
-            const nftInfo = await client.queryContractSmart(CW721_ADDRESS, {
-              nft_info: { token_id: saleState.token_id }
-            });
+            console.log(`Server: Found sale ${i}:`, saleState);
             
+            // For marketplace sales, we might need to query the marketplace differently
+            // Let's add the sale without metadata for now and see what we get
             salesData.push({
               sale_id: i.toString(),
+              token_id: `sale_${i}`, // Use sale ID as token ID for now
               ...saleState,
-              metadata: nftInfo.extension
+              metadata: null
             });
+            
           } catch (err) {
+            console.log(`Server: Sale ${i} not found, stopping search`);
             // Sale doesn't exist, break
             break;
           }
         }
         
+        console.log(`Server: Found ${salesData.length} marketplace sales`);
         result = { sales: salesData };
         break;
 
