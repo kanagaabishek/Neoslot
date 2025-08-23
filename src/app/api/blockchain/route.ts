@@ -3,7 +3,8 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 
-const RPC_URL = process.env.NEXT_PUBLIC_RPC_URL || "http://137.184.182.11:26657";
+const RPC_URL = process.env.NEXT_PUBLIC_RPC_URL || process.env.NEXT_PUBLIC_CHAIN_RPC || "http://137.184.182.11:26657";
+const FALLBACK_RPC = process.env.NEXT_PUBLIC_FALLBACK_RPC || "http://137.184.182.11:26657";
 const CW721_ADDRESS = process.env.NEXT_PUBLIC_CW721_ADDRESS || "andr1tkjswumejtgqd9f0atw8ve0qlfswrmn2202wv45gp40rt8ch7fvs6e83lu";
 const MARKETPLACE_ADDRESS = process.env.NEXT_PUBLIC_MARKETPLACE_ADDRESS || "andr1pux5demcm9xwcsdwshg6splta5ajrkq26w4tkf636vnaa8k49zxqnxlnfg";
 const AUCTION_ADDRESS = process.env.NEXT_PUBLIC_AUCTION_ADDRESS || "andr1j2gwn97plye7h0xh0j2g8e7huwr6f3jqzrln64c7aqwlrg3n2ueq0p0zss";
@@ -14,19 +15,42 @@ let cosmWasmClient: any = null;
 async function getClient() {
   if (!cosmWasmClient) {
     const { CosmWasmClient } = await import("@cosmjs/cosmwasm-stargate");
-    console.log("Server: Connecting to RPC:", RPC_URL);
-    cosmWasmClient = await CosmWasmClient.connect(RPC_URL);
-    console.log("Server: Connected successfully");
+    
+    console.log("Server: Attempting connection to primary RPC:", RPC_URL);
+    
+    try {
+      cosmWasmClient = await CosmWasmClient.connect(RPC_URL);
+      console.log("Server: Successfully connected to primary RPC");
+    } catch (primaryError) {
+      console.warn("Server: Primary RPC failed, trying fallback:", FALLBACK_RPC);
+      
+      try {
+        cosmWasmClient = await CosmWasmClient.connect(FALLBACK_RPC);
+        console.log("Server: Successfully connected to fallback RPC");
+      } catch (fallbackError) {
+        console.error("Server: Both RPC endpoints failed");
+        console.error("Primary error:", primaryError);
+        console.error("Fallback error:", fallbackError);
+        throw new Error(`Failed to connect to blockchain network. Tried endpoints: ${RPC_URL}, ${FALLBACK_RPC}. This may be due to network connectivity issues or RPC endpoints being unavailable.`);
+      }
+    }
   }
   return cosmWasmClient;
 }
 
 export async function POST(request: NextRequest) {
+  console.log("Server: Blockchain API endpoint called");
+  
   try {
     const { type, params } = await request.json();
-    console.log("Server: Handling request type:", type);
+    console.log("Server: Request type:", type, "Params:", params);
+    
+    // Test RPC connectivity first
+    console.log("Server: Testing RPC connectivity to:", RPC_URL);
     
     const client = await getClient();
+    console.log("Server: Successfully connected to blockchain");
+    
     let result;
 
     switch (type) {

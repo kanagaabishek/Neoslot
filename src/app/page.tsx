@@ -163,157 +163,153 @@ export default function Home() {
   const soldNFTs = nfts.filter(nft => nft.status === 'executed');
 
   return (
-    <main className="min-h-screen bg-gray-50">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    <div className="container mx-auto px-4 py-8 max-w-6xl">
+      <div className="text-center mb-8">
+        <h1 className="text-4xl font-bold mb-4 text-black">NeoSlot</h1>
+        <p className="text-gray-600 mb-6">NFT Marketplace & Auction Platform</p>
         
-        {/* Header */}
-        <div className="text-center mb-12">
-          <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold text-black mb-4">
-            NeoSlot
-          </h1>
-          <p className="text-xl text-gray-600 mb-8">
-            NFT Marketplace & Auction Platform on Andromeda
-          </p>
-          
-          {/* Wallet Connection */}
-          <WalletPrompt />
-          
-          {/* Action Buttons */}
-          {isConnected && (
-            <div className="flex flex-col sm:flex-row gap-4 justify-center mt-8">
-              <button
-                onClick={mintNFT}
-                disabled={loading}
-                className="px-6 py-3 bg-black text-white rounded-lg hover:bg-gray-800 transition-colors disabled:opacity-50"
-              >
-                {loading ? 'Processing...' : 'Mint NFT'}
-              </button>
-              <Link
-                href="/mint"
-                className="px-6 py-3 bg-white border border-black text-black rounded-lg hover:bg-gray-50 transition-colors text-center"
-              >
-                Advanced Mint
-              </Link>
-              <Link
-                href="/profile"
-                className="px-6 py-3 bg-white border border-black text-black rounded-lg hover:bg-gray-50 transition-colors text-center"
-              >
-                My NFTs
-              </Link>
-            </div>
-          )}
-        </div>
-
-        {/* Error Display */}
-        {error && (
-          <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-6">
-            <p className="font-medium">Error:</p>
-            <p>{error}</p>
-            <button 
-              onClick={fetchNFTs}
-              className="mt-2 px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700 transition-colors"
+        <WalletPrompt />
+        
+        {isConnected && (
+          <div className="flex flex-wrap gap-4 justify-center mt-6">
+            <button
+              onClick={mintNFT}
+              disabled={loading}
+              className="px-6 py-2 bg-black text-white rounded-lg hover:bg-gray-800 disabled:opacity-50"
             >
-              Retry
+              Quick Mint
             </button>
-          </div>
-        )}
-
-        {/* Loading State */}
-        {loading && (
-          <div className="text-center py-12">
-            <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-black"></div>
-            <p className="mt-4 text-gray-600">Loading NFTs...</p>
-          </div>
-        )}
-
-        {/* NFT Grid */}
-        {!loading && (
-          <>
-            {/* Available NFTs Section */}
-            <div className="mb-12">
-              <h2 className="text-3xl font-bold text-black mb-6">Available NFTs ({availableNFTs.length})</h2>
-              {availableNFTs.length === 0 ? (
-                <div className="text-center py-12 bg-white rounded-lg border">
-                  <p className="text-gray-500 text-lg">No NFTs available for sale</p>
-                  <button 
-                    onClick={fetchNFTs}
-                    className="mt-4 px-6 py-2 bg-black text-white rounded-lg hover:bg-gray-800 transition-colors"
-                  >
-                    Refresh
-                  </button>
-                </div>
-              ) : (
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-                  {availableNFTs.map((nft) => (
-                    <NFTCard
-                      key={`${nft.saleId}-${nft.tokenId}`}
-                      saleId={nft.saleId}
-                      tokenId={nft.tokenId}
-                      price={nft.price}
-                      seller={nft.seller}
-                      status={nft.status}
-                      coinDenom={nft.coinDenom}
-                      isSold={false}
-                      metadata={nft.metadata}
-                      onBuy={() => buyNFT(nft.saleId, nft.price, nft.coinDenom)}
-                    />
-                  ))}
-                </div>
-              )}
-            </div>
-
-            {/* Sold NFTs Section */}
-            {soldNFTs.length > 0 && (
-              <div>
-                <h2 className="text-3xl font-bold text-black mb-6">Recently Sold ({soldNFTs.length})</h2>
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-                  {soldNFTs.map((nft) => (
-                    <NFTCard
-                      key={`${nft.saleId}-${nft.tokenId}`}
-                      saleId={nft.saleId}
-                      tokenId={nft.tokenId}
-                      price={nft.price}
-                      seller={nft.seller}
-                      status={nft.status}
-                      coinDenom={nft.coinDenom}
-                      isSold={true}
-                      metadata={nft.metadata}
-                      onBuy={() => {}} // No buy action for sold items
-                    />
-                  ))}
-                </div>
-              </div>
-            )}
-          </>
-        )}
-
-        {/* Statistics */}
-        {!loading && nfts.length > 0 && (
-          <div className="mt-12 bg-white rounded-lg border p-6">
-            <h3 className="text-xl font-bold text-black mb-4">Marketplace Stats</h3>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-center">
-              <div>
-                <p className="text-2xl font-bold text-black">{nfts.length}</p>
-                <p className="text-gray-600">Total NFTs</p>
-              </div>
-              <div>
-                <p className="text-2xl font-bold text-black">{availableNFTs.length}</p>
-                <p className="text-gray-600">Available</p>
-              </div>
-              <div>
-                <p className="text-2xl font-bold text-black">{soldNFTs.length}</p>
-                <p className="text-gray-600">Sold</p>
-              </div>
-              <div>
-                <p className="text-2xl font-bold text-black">
-                  {new Set(nfts.map(nft => nft.seller)).size}
-                </p>
-                <p className="text-gray-600">Sellers</p>
-              </div>
-            </div>
+            <Link
+              href="/mint"
+              className="px-6 py-2 bg-gray-100 text-black rounded-lg hover:bg-gray-200 no-underline"
+            >
+              Advanced Mint
+            </Link>
+            <Link
+              href="/profile"
+              className="px-6 py-2 bg-gray-100 text-black rounded-lg hover:bg-gray-200 no-underline"
+            >
+              My Profile
+            </Link>
+            <Link
+              href="/auction"
+              className="px-6 py-2 bg-gray-100 text-black rounded-lg hover:bg-gray-200 no-underline"
+            >
+              Auctions
+            </Link>
           </div>
         )}
       </div>
-    </main>
+
+      {error && (
+        <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-6">
+          <div className="text-red-800">
+            <strong>Connection Error:</strong>
+            <p className="mt-1">{error}</p>
+            <button
+              onClick={fetchNFTs}
+              className="mt-3 px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700"
+            >
+              Try Again
+            </button>
+          </div>
+        </div>
+      )}
+
+      {loading && (
+        <div className="text-center py-8">
+          <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-black"></div>
+          <p className="mt-2 text-gray-600">Loading NFT marketplace...</p>
+        </div>
+      )}
+
+      {!loading && (
+        <>
+          <div className="mb-8">
+            <h2 className="text-2xl font-bold mb-4 text-black">
+              Available NFTs {availableNFTs.length > 0 && `(${availableNFTs.length})`}
+            </h2>
+            
+            {availableNFTs.length === 0 ? (
+              <div className="text-center py-12 bg-gray-50 rounded-lg">
+                <p className="text-gray-500 mb-4">No NFTs currently available</p>
+                <button
+                  onClick={fetchNFTs}
+                  className="px-4 py-2 bg-black text-white rounded hover:bg-gray-800"
+                >
+                  Refresh
+                </button>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {availableNFTs.map((nft) => (
+                  <NFTCard
+                    key={`${nft.saleId}-${nft.tokenId}`}
+                    saleId={nft.saleId}
+                    tokenId={nft.tokenId}
+                    price={nft.price}
+                    seller={nft.seller}
+                    status={nft.status}
+                    coinDenom={nft.coinDenom}
+                    isSold={false}
+                    metadata={nft.metadata}
+                    onBuy={() => buyNFT(nft.saleId, nft.price, nft.coinDenom)}
+                  />
+                ))}
+              </div>
+            )}
+          </div>
+
+          {soldNFTs.length > 0 && (
+            <div>
+              <h2 className="text-2xl font-bold mb-4 text-black">
+                Recently Sold ({soldNFTs.length})
+              </h2>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {soldNFTs.map((nft) => (
+                  <NFTCard
+                    key={`${nft.saleId}-${nft.tokenId}-sold`}
+                    saleId={nft.saleId}
+                    tokenId={nft.tokenId}
+                    price={nft.price}
+                    seller={nft.seller}
+                    status={nft.status}
+                    coinDenom={nft.coinDenom}
+                    isSold={true}
+                    metadata={nft.metadata}
+                    onBuy={() => {}}
+                  />
+                ))}
+              </div>
+            </div>
+          )}
+        </>
+      )}
+
+      {!loading && nfts.length > 0 && (
+        <div className="mt-8 bg-white rounded-lg border p-6 text-center">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <div>
+              <div className="text-2xl font-bold text-black">{nfts.length}</div>
+              <div className="text-sm text-gray-600">Total NFTs</div>
+            </div>
+            <div>
+              <div className="text-2xl font-bold text-black">{availableNFTs.length}</div>
+              <div className="text-sm text-gray-600">Available</div>
+            </div>
+            <div>
+              <div className="text-2xl font-bold text-black">{soldNFTs.length}</div>
+              <div className="text-sm text-gray-600">Sold</div>
+            </div>
+            <div>
+              <div className="text-2xl font-bold text-black">
+                {new Set(nfts.map(nft => nft.seller)).size}
+              </div>
+              <div className="text-sm text-gray-600">Active Sellers</div>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
   );
 }

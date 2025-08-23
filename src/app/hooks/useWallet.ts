@@ -8,19 +8,31 @@ export const useWallet = () => {
   const [isConnecting, setIsConnecting] = useState(false);
 
   const connectWallet = async () => {
+    console.log('🔗 Attempting to connect wallet...');
+    
     if (!window.keplr) {
-      alert('Please install Keplr extension');
+      console.error('❌ Keplr extension not found');
+      alert('Please install Keplr extension first. Visit https://www.keplr.app/ to download it.');
       return;
     }
 
+    console.log('✅ Keplr extension detected');
+
     try {
       setIsConnecting(true);
+      console.log('🔄 Setting up Keplr chain...');
       
       const offlineSigner = await setupKeplrChain();
+      console.log('✅ Chain setup successful');
+      
+      console.log('🔄 Getting accounts...');
       const accounts = await offlineSigner.getAccounts();
+      console.log('📋 Accounts retrieved:', accounts.length);
       
       if (accounts.length > 0) {
         const newAddress = accounts[0].address;
+        console.log('✅ Wallet connected:', newAddress.slice(0, 10) + '...');
+        
         setAddress(newAddress);
         localStorage.setItem('walletAddress', newAddress);
         
@@ -30,10 +42,28 @@ export const useWallet = () => {
         }));
         
         return newAddress;
+      } else {
+        console.error('❌ No accounts found');
+        alert('No accounts found in Keplr wallet. Please create an account first.');
       }
     } catch (error) {
-      console.error('Failed to connect wallet:', error);
-      alert('Failed to connect wallet. Please try again.');
+      console.error('❌ Failed to connect wallet:', error);
+      
+      let errorMessage = 'Failed to connect wallet. ';
+      
+      if (error instanceof Error) {
+        if (error.message.includes('Request rejected')) {
+          errorMessage += 'Connection was rejected. Please try again and approve the connection.';
+        } else if (error.message.includes('chain')) {
+          errorMessage += 'Failed to add Andromeda chain. Please check your network settings.';
+        } else {
+          errorMessage += error.message;
+        }
+      } else {
+        errorMessage += 'Unknown error occurred.';
+      }
+      
+      alert(errorMessage);
       return null;
     } finally {
       setIsConnecting(false);
