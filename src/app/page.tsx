@@ -228,6 +228,12 @@ export default function Home() {
                 Advanced Mint
               </Link>
               <Link
+                href="/auction"
+                className="px-4 py-2 bg-gray-200 text-black rounded-lg hover:bg-gray-300 no-underline text-sm"
+              >
+                Auctions
+              </Link>
+              <Link
                 href="/profile"
                 className="px-4 py-2 bg-gray-200 text-black rounded-lg hover:bg-gray-300 no-underline text-sm"
               >

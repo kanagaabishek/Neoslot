@@ -4,6 +4,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { getSigningClient, getQueryClient } from '../utils/andrClient';
 import { setupKeplrChain } from '../utils/keplrChain';
+import BlockchainAPI from '../utils/blockchainAPI';
 import WalletPrompt from '../components/WalletPrompt';
 import NetworkStatus from '../components/NetworkStatus';
 import DebugPanel from '../components/DebugPanel';
@@ -250,100 +251,47 @@ export default function AuctionPage() {
   const loadAuctions = useCallback(async () => {
     setLoading(true);
     setError("");
-    addDebugLog("Loading auctions...");
+    addDebugLog("Loading auctions via server API...");
 
     try {
-      // Use automatic fallback logic - don't pass specific RPC URL
-      const queryClient = await getQueryClient();
+      // Use server-side API to get auctions (bypasses browser RPC restrictions)
+      const auctionData = await BlockchainAPI.getAuctionList();
+      addDebugLog(`Server API returned ${auctionData.length} auctions`);
       
-      // Query active auctions using correct Andromeda format
-      const auctionsQuery = { 
-        auction_infos_for_address: {
-          token_address: cw721,
-          limit: 50
-        }
-      };
-      addDebugLog(`Querying auctions from contract: ${auctionContract}`);
+      // Process auction data from server API
+      const processedAuctions = auctionData.map((auction: any) => {
+        addDebugLog(`Processing auction ${auction.auction_id} for token ${auction.token_id}`);
+        
+        // Parse timestamps from nanoseconds to milliseconds
+        const startTime = auction.start_time?.at_time ? Math.floor(parseInt(auction.start_time.at_time) / 1000000) : 0;
+        const endTime = auction.end_time?.at_time ? Math.floor(parseInt(auction.end_time.at_time) / 1000000) : 0;
+        
+        return {
+          token_id: auction.token_id,
+          seller: auction.owner || auction.recipient?.address || 'Unknown',
+          start_time: startTime,
+          end_time: endTime,
+          min_bid: auction.min_bid || '0',
+          highest_bid: auction.high_bidder_amount && auction.high_bidder_addr ? {
+            bidder: auction.high_bidder_addr,
+            amount: auction.high_bidder_amount
+          } : undefined,
+          coin_denom: auction.coin_denom || 'uandr',
+          status: determineAuctionStatus({
+            start_time: startTime,
+            end_time: endTime,
+            is_cancelled: auction.is_cancelled
+          }),
+          metadata: auction.metadata || {}
+        };
+      });
+
+      setAuctions(processedAuctions);
+      addDebugLog(`Loaded ${processedAuctions.length} auctions successfully`);
       
-      const auctionsResult = await queryClient.queryContractSmart(auctionContract, auctionsQuery);
-      addDebugLog(`Found ${auctionsResult?.length || 0} auctions`);
-      
-      // Load metadata for each auction
-      const auctionsWithMetadata = await Promise.all(
-        (auctionsResult || []).map(async (auction: Record<string, unknown>) => {
-          try {
-            // Get detailed auction state if we have auction_id
-            let auctionDetails = auction;
-            if (auction.auction_id) {
-              try {
-                const detailedState = await queryClient.queryContractSmart(auctionContract, {
-                  auction_state: { auction_id: auction.auction_id }
-                });
-                auctionDetails = { ...auction, ...detailedState };
-              } catch (err) {
-                addDebugLog(`Could not get detailed state for auction ${auction.auction_id}`);
-              }
-            }
-            
-            // Try to get token metadata if we have token_id
-            let metadata = {};
-            if (auctionDetails.token_id) {
-              try {
-                const tokenQuery = { nft_info: { token_id: auctionDetails.token_id } };
-                const tokenInfo = await queryClient.queryContractSmart(cw721, tokenQuery);
-                
-                // Use the same metadata parsing logic as the details page
-                metadata = tokenInfo?.extension || tokenInfo?.token_uri ? (() => {
-                  try {
-                    return typeof tokenInfo.token_uri === 'string' ? JSON.parse(tokenInfo.token_uri) : tokenInfo.extension || {};
-                  } catch {
-                    return { name: tokenInfo.token_uri };
-                  }
-                })() : {};
-                
-                addDebugLog(`Loaded metadata for token ${auctionDetails.token_id}: ${JSON.stringify(metadata)}`);
-              } catch (err) {
-                addDebugLog(`Could not get metadata for token ${auctionDetails.token_id}: ${err}`);
-              }
-            }
-            
-            return {
-              ...auctionDetails,
-              metadata,
-              status: determineAuctionStatus(auctionDetails),
-              // Preserve original time values for proper processing in determineAuctionStatus
-              start_time: auctionDetails.start_time || auction.start_time || 0,
-              end_time: auctionDetails.end_time || auction.end_time || 0,
-              token_id: auctionDetails.token_id || auction.token_id || 'unknown',
-              seller: auctionDetails.seller || auction.seller || 'unknown',
-              min_bid: auctionDetails.min_bid || auction.min_bid || '0',
-              highest_bid: auctionDetails.highest_bid || auction.highest_bid,
-              coin_denom: auctionDetails.coin_denom || auction.coin_denom || 'uandr'
-            };
-          } catch (err) {
-            addDebugLog(`Error loading auction details: ${err}`);
-            return {
-              ...auction,
-              status: determineAuctionStatus(auction),
-              // Preserve original time values for proper processing in determineAuctionStatus
-              start_time: auction.start_time || 0,
-              end_time: auction.end_time || 0,
-              token_id: auction.token_id || 'unknown',
-              seller: auction.seller || 'unknown',
-              min_bid: auction.min_bid || '0',
-              coin_denom: auction.coin_denom || 'uandr'
-            };
-          }
-        })
-      );
-      
-      setAuctions(auctionsWithMetadata);
-      addDebugLog("✅ Auctions loaded successfully");
-      
-    } catch (err: unknown) {
-      console.error("Error loading auctions:", err);
-      const errorMessage = err instanceof Error ? err.message : String(err);
-      addDebugLog(`❌ Error loading auctions: ${errorMessage}`);
+    } catch (serverError) {
+      const errorMessage = serverError instanceof Error ? serverError.message : 'Failed to load auctions';
+      addDebugLog(`Server API failed: ${errorMessage}`);
       setError(`Failed to load auctions: ${errorMessage}`);
     } finally {
       setLoading(false);

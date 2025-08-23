@@ -98,26 +98,51 @@ export async function POST(request: NextRequest) {
           };
           
           const auctionsResponse = await client.queryContractSmart(AUCTION_ADDRESS, auctionsQuery);
+          console.log("Server: Raw auction response:", auctionsResponse);
+          
           const auctions = [];
           
-          for (const auction of auctionsResponse.auctions || []) {
-            try {
-              // Get NFT metadata
-              const nftInfo = await client.queryContractSmart(CW721_ADDRESS, {
-                nft_info: { token_id: auction.token_id }
-              });
-              
-              auctions.push({
-                ...auction,
-                metadata: nftInfo.extension
-              });
-            } catch (metadataError) {
-              // Include auction without metadata if metadata fails
-              auctions.push(auction);
+          // The response is an array of objects with auction_ids and token_id
+          for (const auctionInfo of auctionsResponse || []) {
+            const { auction_ids, token_id } = auctionInfo;
+            
+            // For each auction_id, try to get the auction details
+            for (const auctionId of auction_ids || []) {
+              try {
+                const auctionState = await client.queryContractSmart(AUCTION_ADDRESS, {
+                  auction_state: { auction_id: auctionId }
+                });
+                
+                // Get NFT metadata
+                let metadata = null;
+                try {
+                  const nftInfo = await client.queryContractSmart(CW721_ADDRESS, {
+                    nft_info: { token_id: token_id }
+                  });
+                  metadata = nftInfo.extension;
+                } catch (metadataError) {
+                  console.log(`Server: Failed to get metadata for token ${token_id}`);
+                }
+                
+                auctions.push({
+                  auction_id: auctionId,
+                  token_id: token_id,
+                  ...auctionState,
+                  metadata: metadata
+                });
+                
+                console.log(`Server: Added auction ${auctionId} for token ${token_id}`);
+                
+              } catch (auctionError) {
+                const errorMsg = auctionError instanceof Error ? auctionError.message : 'Unknown error';
+                console.log(`Server: Failed to get auction ${auctionId} details:`, errorMsg);
+              }
             }
           }
           
+          console.log(`Server: Found ${auctions.length} auctions`);
           result = { auctions };
+          
         } catch (error) {
           console.error("Server: Auction query failed:", error);
           result = { auctions: [] };
