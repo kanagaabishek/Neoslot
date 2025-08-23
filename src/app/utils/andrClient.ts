@@ -7,15 +7,29 @@ const DEFAULT_RPC = "http://137.184.182.11:26657";
 // RPC endpoint configuration with multiple fallbacks
 const PRIMARY_RPC = process.env.NEXT_PUBLIC_RPC_URL || process.env.NEXT_PUBLIC_CHAIN_RPC || DEFAULT_RPC;
 const FALLBACK_ENDPOINTS = [
-  process.env.NEXT_PUBLIC_FALLBACK_RPC_1 || DEFAULT_RPC,
+  process.env.NEXT_PUBLIC_FALLBACK_RPC_1 || "https://rpc.testnet.andromedaprotocol.io",
   process.env.NEXT_PUBLIC_FALLBACK_RPC_2 || DEFAULT_RPC,
   process.env.NEXT_PUBLIC_FALLBACK_RPC_3 || DEFAULT_RPC,
   process.env.NEXT_PUBLIC_FALLBACK_RPC_4 || DEFAULT_RPC,
 ].filter(Boolean) as string[];
 
-// Check if we're in production and on client side
+// Check if we're in production and prioritize HTTPS endpoints
 const isProduction = process.env.NODE_ENV === 'production';
 const isClient = typeof window !== 'undefined';
+
+// Get production-safe RPC endpoint
+const getProductionSafeRPC = (): string => {
+  if (typeof window !== 'undefined' && window.location.protocol === 'https:') {
+    // In HTTPS context, prioritize HTTPS RPC endpoints
+    const httpsEndpoints = [PRIMARY_RPC, ...FALLBACK_ENDPOINTS].filter(url => url.startsWith('https:'));
+    if (httpsEndpoints.length > 0) {
+      return httpsEndpoints[0];
+    }
+    // If no HTTPS endpoints available, use proxy or fallback to HTTP
+    console.warn('No HTTPS RPC endpoints available, may cause mixed content issues in production');
+  }
+  return PRIMARY_RPC;
+};
 
 // Helper function to test RPC connectivity with shorter timeout for production
 export const testRpcConnectivity = async (rpcUrl: string): Promise<boolean> => {
@@ -76,24 +90,41 @@ export const testProxyConnectivity = async (): Promise<boolean> => {
 export const getBestRpcEndpoint = async (): Promise<string> => {
   console.log("🔍 Testing RPC endpoints for best connectivity...");
   
+  // Use production-safe RPC first
+  const primaryEndpoint = getProductionSafeRPC();
+  
   // Test primary endpoint first
-  if (await testRpcConnectivity(PRIMARY_RPC)) {
-    console.log("✅ Using primary RPC:", PRIMARY_RPC);
-    return PRIMARY_RPC;
+  if (await testRpcConnectivity(primaryEndpoint)) {
+    console.log("✅ Using production-safe RPC:", primaryEndpoint);
+    return primaryEndpoint;
   }
   
-  // Try all fallback endpoints
+  // Try all endpoints, prioritizing HTTPS in production
   console.log("⚠️ Primary RPC failed, trying fallback endpoints...");
-  for (const endpoint of FALLBACK_ENDPOINTS) {
+  const allEndpoints = [PRIMARY_RPC, ...FALLBACK_ENDPOINTS];
+  
+  // In HTTPS context, try HTTPS endpoints first
+  if (typeof window !== 'undefined' && window.location.protocol === 'https:') {
+    const httpsEndpoints = allEndpoints.filter(url => url.startsWith('https:'));
+    for (const endpoint of httpsEndpoints) {
+      if (endpoint && await testRpcConnectivity(endpoint)) {
+        console.log("✅ Using HTTPS fallback RPC:", endpoint);
+        return endpoint;
+      }
+    }
+  }
+  
+  // Try remaining endpoints
+  for (const endpoint of allEndpoints) {
     if (endpoint && await testRpcConnectivity(endpoint)) {
       console.log("✅ Using fallback RPC:", endpoint);
       return endpoint;
     }
   }
   
-  // If all fail, return default RPC as last resort
-  console.log("⚠️ All endpoints failed, using default as last resort");
-  return DEFAULT_RPC;
+  // If all fail, return primary as last resort
+  console.log("⚠️ All endpoints failed, using primary as last resort");
+  return primaryEndpoint;
 };
 
 export const getQueryClient = async (rpcUrl?: string) => {

@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { getSigningClient } from '../utils/andrClient';
+import { getSigningClient, getBestRpcEndpoint } from '../utils/andrClient';
 import { setupKeplrChain } from '../utils/keplrChain';
 import WalletPrompt from '../components/WalletPrompt';
 import { useWallet } from '../hooks/useWallet';
@@ -152,11 +152,11 @@ export default function ProfilePage() {
     setListingError('');
     
     try {
-      const rpc = process.env.NEXT_PUBLIC_RPC_URL || process.env.NEXT_PUBLIC_CHAIN_RPC!;
+      const rpcUrl = await getBestRpcEndpoint();
       
       // Setup Keplr chain and get signer
       const offlineSigner = await setupKeplrChain();
-      const signingClient = await getSigningClient(rpc, offlineSigner);
+      const signingClient = await getSigningClient(rpcUrl, offlineSigner);
       
       // Convert price to micro units (multiply by 1,000,000)
       const priceInMicroUnits = Math.floor(parseFloat(listingPrice) * 1_000_000).toString();
@@ -220,11 +220,11 @@ export default function ProfilePage() {
     setAuctionError('');
     
     try {
-      const rpc = process.env.NEXT_PUBLIC_RPC_URL || process.env.NEXT_PUBLIC_CHAIN_RPC!;
+      const rpcUrl = await getBestRpcEndpoint();
       
       // Setup Keplr chain and get signer
       const offlineSigner = await setupKeplrChain();
-      const signingClient = await getSigningClient(rpc, offlineSigner);
+      const signingClient = await getSigningClient(rpcUrl, offlineSigner);
       
       console.log('Listing NFT for auction:', {
         tokenId: selectedNFT.tokenId

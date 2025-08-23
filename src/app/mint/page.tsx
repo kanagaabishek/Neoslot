@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { getSigningClient } from '../utils/andrClient';
+import { getSigningClient, getBestRpcEndpoint } from '../utils/andrClient';
 import { setupKeplrChain } from '../utils/keplrChain';
 import { SigningCosmWasmClient } from '@cosmjs/cosmwasm-stargate';
 import WalletPrompt from '../components/WalletPrompt';
@@ -104,16 +104,17 @@ export default function MintPage() {
       setSuccess("");
       clearDebugLogs();
 
-      const rpc = process.env.NEXT_PUBLIC_CHAIN_RPC!;
-      
       addDebugLog("Starting MINT-ONLY process...");
-      addDebugLog(`Environment: RPC=${rpc}, Chain=${process.env.NEXT_PUBLIC_CHAIN_ID}`);
+      
+      addDebugLog("Finding best RPC endpoint...");
+      const rpcUrl = await getBestRpcEndpoint();
+      addDebugLog(`Using RPC: ${rpcUrl}, Chain: ${process.env.NEXT_PUBLIC_CHAIN_ID}`);
       
       addDebugLog("Setting up Keplr chain...");
       const offlineSigner = await setupKeplrChain();
       
       addDebugLog("Creating signing client...");
-      const signingClient = await getSigningClient(rpc, offlineSigner);
+      const signingClient = await getSigningClient(rpcUrl, offlineSigner);
 
       // Prepare metadata
       const metadata: NFTMetadata = {
@@ -180,33 +181,20 @@ export default function MintPage() {
       setSuccess("");
       clearDebugLogs();
 
-      const rpc = process.env.NEXT_PUBLIC_CHAIN_RPC!;
+      addDebugLog("Finding best RPC endpoint...");
+      const rpcUrl = await getBestRpcEndpoint();
       
-      console.log("Environment check:", { rpc, chainId: process.env.NEXT_PUBLIC_CHAIN_ID, cw721, marketplace });
-      addDebugLog(`Environment check: RPC=${rpc}, Chain=${process.env.NEXT_PUBLIC_CHAIN_ID}`);
+      console.log("Environment check:", { rpc: rpcUrl, chainId: process.env.NEXT_PUBLIC_CHAIN_ID, cw721, marketplace });
+      addDebugLog(`Environment check: RPC=${rpcUrl}, Chain=${process.env.NEXT_PUBLIC_CHAIN_ID}`);
       addDebugLog(`Contracts: CW721=${cw721}, Marketplace=${marketplace}`);
       
-      // Check network connectivity first
-      try {
-        addDebugLog("Testing RPC connectivity...");
-        const response = await fetch(rpc + "/status");
-        if (!response.ok) {
-          throw new Error(`RPC endpoint ${rpc} is not responding`);
-        }
-        console.log("RPC endpoint is reachable");
-        addDebugLog("✅ RPC endpoint is reachable");
-      } catch (networkErr) {
-        addDebugLog(`❌ Network error: ${networkErr}`);
-        throw new Error(`Network error: Cannot reach RPC endpoint ${rpc}. Please check your internet connection.`);
-      }
-
       console.log("Setting up Keplr chain...");
       addDebugLog("Setting up Keplr chain...");
       const offlineSigner = await setupKeplrChain();
       
       console.log("Getting signing client...");
       addDebugLog("Creating signing client...");
-      const signingClient = await getSigningClient(rpc, offlineSigner);
+      const signingClient = await getSigningClient(rpcUrl, offlineSigner);
 
       // Verify the current account
       const accounts = await offlineSigner.getAccounts();
