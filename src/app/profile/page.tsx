@@ -2,10 +2,11 @@
 
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { getQueryClient, getSigningClient } from '../utils/andrClient';
+import { getSigningClient } from '../utils/andrClient';
 import { setupKeplrChain } from '../utils/keplrChain';
 import WalletPrompt from '../components/WalletPrompt';
 import { useWallet } from '../hooks/useWallet';
+import BlockchainAPI from '../utils/blockchainAPI';
 
 // Environment variables
 const cw721 = process.env.NEXT_PUBLIC_CW721_ADDRESS!;
@@ -69,100 +70,30 @@ export default function ProfilePage() {
       setLoading(true);
       setError("");
       
-      // Use automatic fallback logic - don't pass specific RPC URL
-      const client = await getQueryClient();
-
-      // Get all tokens owned by user
       console.log('Fetching NFTs for user:', address);
       
-      const tokensResponse = await client.queryContractSmart(cw721, {
-        tokens: {
-          owner: address,
-          start_after: null,
-          limit: 100
-        }
-      });
-
-      const tokenIds = tokensResponse.tokens || [];
-      console.log('Found tokens:', tokenIds);
-
-      // Fetch details for each token
-      const nftPromises = tokenIds.map(async (tokenId: string) => {
-        try {
-          // Get token info
-          const tokenInfo = await client.queryContractSmart(cw721, {
-            nft_info: { token_id: tokenId }
-          });
-
-          let metadata: Record<string, unknown> = {};
-          
-          // Parse metadata
-          if (tokenInfo.token_uri) {
-            try {
-              metadata = JSON.parse(tokenInfo.token_uri);
-            } catch {
-              metadata = { name: tokenInfo.token_uri };
-            }
-          }
-          
-          if (tokenInfo.extension) {
-            metadata = { ...metadata, ...tokenInfo.extension };
-          }
-
-          // Check if there's a sale for this NFT
-          let saleInfo = null;
-          try {
-            const saleIdsResponse = await client.queryContractSmart(marketplace, {
-              sale_ids: { 
-                token_address: cw721,
-                token_id: tokenId
-              }
-            });
-            
-            if (saleIdsResponse.sale_ids && saleIdsResponse.sale_ids.length > 0) {
-              const saleId = saleIdsResponse.sale_ids[0];
-              const saleState = await client.queryContractSmart(marketplace, {
-                sale_state: { sale_id: saleId }
-              });
-              
-              saleInfo = {
-                saleId: saleId,
-                price: saleState.price,
-                status: saleState.status,
-                seller: saleState.recipient?.address || '',
-                coinDenom: saleState.coin_denom
-              };
-            }
-          } catch (saleError) {
-            console.log('No sale found for NFT:', tokenId);
-          }
-
-          return {
-            tokenId,
-            name: metadata.name,
-            description: metadata.description,
-            image: metadata.image,
-            metadata,
-            saleInfo
-          };
-
-        } catch (error) {
-          console.error(`Error fetching details for token ${tokenId}:`, error);
-          return null;
-        }
-      });
-
-      const nftResults = await Promise.all(nftPromises);
-      const validNFTs = nftResults.filter((nft): nft is UserNFT => nft !== null);
+      // Use the server API to get user NFTs
+      const userNFTs = await BlockchainAPI.getUserNFTs(address);
+      
+      // Convert server response to the expected format
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const validNFTs: UserNFT[] = userNFTs.map((nft: any) => ({
+        tokenId: nft.token_id,
+        name: nft.metadata?.name,
+        description: nft.metadata?.description,
+        image: nft.metadata?.image,
+        metadata: nft.metadata,
+        saleInfo: nft.saleInfo
+      }));
       
       setUserNFTs(validNFTs);
 
       // Calculate user stats
-      const listedNFTs = validNFTs.filter(nft => nft.saleInfo?.status === 'open').length;
-      const soldNFTs = validNFTs.filter(nft => nft.saleInfo?.status === 'executed').length;
+      const listedNFTs = validNFTs.filter((nft: UserNFT) => nft.saleInfo?.status === 'open').length;
+      const soldNFTs = validNFTs.filter((nft: UserNFT) => nft.saleInfo?.status === 'executed').length;
       const totalEarnings = validNFTs
-        .filter(nft => nft.saleInfo?.status === 'executed')
-        .reduce((total, nft) => {
+        .filter((nft: UserNFT) => nft.saleInfo?.status === 'executed')
+        .reduce((total: number, nft: UserNFT) => {
           if (nft.saleInfo?.price) {
             return total + parseInt(nft.saleInfo.price);
           }

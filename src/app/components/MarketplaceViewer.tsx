@@ -1,7 +1,7 @@
 "use client"
 
 import React, { useState, useEffect } from 'react';
-import { getQueryClient } from '../utils/andrClient';
+import BlockchainAPI from '../utils/blockchainAPI';
 
 interface MarketplaceViewerProps {
   rpcUrl: string;
@@ -29,26 +29,8 @@ export default function MarketplaceViewer({ rpcUrl, marketplaceAddress, cw721Add
     setError("");
     
     try {
-      // Use automatic fallback logic - don't pass specific RPC URL
-      const client = await getQueryClient();
-      const salesData: SaleInfo[] = [];
-      
-      // Try to query sale IDs 1 through 10
-      for (let i = 1; i <= 10; i++) {
-        try {
-          const saleState = await client.queryContractSmart(marketplaceAddress, {
-            sale_state: { sale_id: i.toString() }
-          });
-          salesData.push({
-            sale_id: i.toString(),
-            ...saleState
-          });
-        } catch (err) {
-          // Sale doesn't exist, continue
-          break;
-        }
-      }
-      
+      // Use the server API to get marketplace sales
+      const salesData = await BlockchainAPI.getMarketplaceSales();
       setSales(salesData);
     } catch (err) {
       setError(`Failed to load marketplace: ${err instanceof Error ? err.message : 'Unknown error'}`);

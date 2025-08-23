@@ -1,7 +1,8 @@
 'use client'
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { getQueryClient, getSigningClient } from "./utils/andrClient";
+import BlockchainAPI from "./utils/blockchainAPI";
+import { getSigningClient } from "./utils/andrClient";
 import { setupKeplrChain } from "./utils/keplrChain";
 import NFTCard from "./components/NFTcard";
 import WalletPrompt from "./components/WalletPrompt";
@@ -55,29 +56,35 @@ export default function Home() {
     // Only run on client side
     if (typeof window === 'undefined') return;
     
-    let rpc = '';
+    const rpc = '';
     try {
       setLoading(true);
       setError("");
       
-      rpc = process.env.NEXT_PUBLIC_RPC_URL || process.env.NEXT_PUBLIC_CHAIN_RPC!;
+      console.log('Loading NFT sales via server API...');
       
-      console.log('Attempting to connect to RPC endpoint...');
-      
-      let client;
       try {
-        // Use automatic fallback logic - don't pass specific RPC URL
-        client = await getQueryClient();
-        if (!client) {
-          throw new Error('Failed to create query client');
-        }
-        console.log('Successfully connected to RPC');
-      } catch (rpcError) {
-        console.error('RPC connection failed:', rpcError);
-        throw new Error(`Failed to connect to RPC endpoint. Please check your network connection. ${rpcError instanceof Error ? rpcError.message : ''}`);
+        const salesData = await BlockchainAPI.getMarketplaceSales();
+        console.log('Successfully loaded sales:', salesData.length);
+        
+        // Convert to NFTSale format
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const nftSales = salesData.map((sale: any) => ({
+          sale_id: sale.sale_id,
+          token_id: sale.token_id,
+          seller: sale.seller,
+          price: sale.price,
+          coin_denom: sale.coin_denom || 'uandr',
+          metadata: sale.metadata,
+          status: sale.status || 'active'
+        }));
+        
+        setNFTs(nftSales);
+        
+      } catch (serverError) {
+        console.error('Server API failed:', serverError);
+        throw new Error(`Failed to load NFT data. ${serverError instanceof Error ? serverError.message : 'Server error'}`);
       }
-
-      // Get all sales for our CW721 contract using sale_infos_for_address
       console.log('Querying marketplace for sales...');
       
       let saleInfosResponse;
@@ -224,17 +231,17 @@ export default function Home() {
   const buyNFT = async (saleId: string, price: string) => {
     if (!isConnected || typeof window === 'undefined') return;
 
-    let rpc = '';
+    const rpc = '';
     try {
       setLoading(true);
       setError("");
 
-      rpc = process.env.NEXT_PUBLIC_RPC_URL || process.env.NEXT_PUBLIC_CHAIN_RPC!;
+      const rpcUrl = process.env.NEXT_PUBLIC_RPC_URL || process.env.NEXT_PUBLIC_CHAIN_RPC!;
       
       // Setup Keplr chain and get signer
       const offlineSigner = await setupKeplrChain();
       
-      const signingClient = await getSigningClient(rpc, offlineSigner);
+      const signingClient = await getSigningClient(rpcUrl, offlineSigner);
 
       const result = await signingClient.execute(
         address,

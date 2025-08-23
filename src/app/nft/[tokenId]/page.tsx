@@ -2,7 +2,8 @@
 
 import React, { useState, useEffect } from 'react';
 import { useRouter, useParams } from 'next/navigation';
-import { getQueryClient, getSigningClient } from '../../utils/andrClient';
+import { getSigningClient } from '../../utils/andrClient';
+import BlockchainAPI from '../../utils/blockchainAPI';
 import { useWallet } from '../../hooks/useWallet';
 
 // Environment variables
@@ -50,78 +51,17 @@ export default function NFTDetailPage() {
       setLoading(true);
       setError("");
       
-      // Use automatic fallback logic - don't pass specific RPC URL
-      const client = await getQueryClient();
-
-      // Get NFT info from CW721 contract
       console.log('Fetching NFT details for token:', tokenId);
       
-      // Get owner
-      const ownerInfo = await client.queryContractSmart(cw721, {
-        owner_of: { token_id: tokenId }
-      });
-
-      // Get token info (metadata)
-      const tokenInfo = await client.queryContractSmart(cw721, {
-        nft_info: { token_id: tokenId }
-      });
-
-      let metadata: NFTMetadata = {};
+      // Get NFT details using the server API
+      const details = await BlockchainAPI.getNFTDetails(tokenId);
       
-      // Parse metadata from token_uri or extension
-      if (tokenInfo.token_uri) {
-        try {
-          metadata = JSON.parse(tokenInfo.token_uri);
-        } catch {
-          // If parsing fails, treat as plain string
-          metadata = { name: tokenInfo.token_uri };
-        }
-      }
-      
-      if (tokenInfo.extension) {
-        metadata = { ...metadata, ...tokenInfo.extension };
-      }
-
-      // Check if there's a sale for this NFT
-      let saleInfo = null;
-      try {
-        const saleIdsResponse = await client.queryContractSmart(marketplace, {
-          sale_ids: { 
-            token_address: cw721,
-            token_id: tokenId
-          }
-        });
-        
-        if (saleIdsResponse.sale_ids && saleIdsResponse.sale_ids.length > 0) {
-          const saleId = saleIdsResponse.sale_ids[0];
-          const saleState = await client.queryContractSmart(marketplace, {
-            sale_state: { sale_id: saleId }
-          });
-          
-          saleInfo = {
-            saleId: saleId,
-            price: saleState.price,
-            status: saleState.status,
-            seller: saleState.recipient?.address || '',
-            coinDenom: saleState.coin_denom
-          } as {
-            saleId: string;
-            price: string;
-            status: string;
-            seller: string;
-            coinDenom: string;
-          };
-        }
-      } catch (saleError) {
-        console.log('No sale found for this NFT or error fetching sale:', saleError);
-      }
-
       setNftDetails({
         tokenId,
-        owner: ownerInfo.owner,
-        metadata,
-        tokenUri: tokenInfo.token_uri,
-        saleInfo: saleInfo || undefined
+        owner: details.owner,
+        metadata: details.metadata,
+        tokenUri: details.tokenUri,
+        saleInfo: details.saleInfo
       });
 
     } catch (err) {
