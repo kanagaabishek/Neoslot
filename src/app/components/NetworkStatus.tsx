@@ -1,10 +1,10 @@
 "use client"
 
 import React, { useState, useEffect } from 'react';
-import { testRpcConnectivity } from '../utils/andrClient';
+import BlockchainAPI from '../utils/blockchainAPI';
 
 interface NetworkStatusProps {
-  rpcUrl: string;
+  rpcUrl?: string; // Made optional since we're using server API
 }
 
 export default function NetworkStatus({ rpcUrl }: NetworkStatusProps) {
@@ -14,11 +14,13 @@ export default function NetworkStatus({ rpcUrl }: NetworkStatusProps) {
   const checkConnectivity = async () => {
     setStatus('checking');
     try {
-      const isConnected = await testRpcConnectivity(rpcUrl);
-      setStatus(isConnected ? 'connected' : 'disconnected');
+      // Use server API to test connectivity instead of direct RPC calls
+      // This avoids browser CORS and mixed content issues
+      await BlockchainAPI.getMarketplaceSales();
+      setStatus('connected');
       setLastCheck(new Date());
     } catch (error) {
-      console.error('Network check failed:', error);
+      console.error('❌ RPC connectivity test failed for', rpcUrl, ':', error);
       setStatus('disconnected');
       setLastCheck(new Date());
     }
@@ -29,7 +31,7 @@ export default function NetworkStatus({ rpcUrl }: NetworkStatusProps) {
     // Check every 30 seconds
     const interval = setInterval(checkConnectivity, 30000);
     return () => clearInterval(interval);
-  }, [rpcUrl]);
+  }, []); // Removed rpcUrl dependency since we're using server API
 
   const getStatusColor = () => {
     switch (status) {
@@ -42,8 +44,8 @@ export default function NetworkStatus({ rpcUrl }: NetworkStatusProps) {
 
   const getStatusText = () => {
     switch (status) {
-      case 'connected': return '✅ RPC Connected';
-      case 'disconnected': return '❌ RPC Disconnected';
+      case 'connected': return '✅ Blockchain Connected';
+      case 'disconnected': return '❌ Blockchain Disconnected';
       case 'checking': return '🔄 Checking...';
       default: return 'Unknown';
     }
@@ -62,7 +64,7 @@ export default function NetworkStatus({ rpcUrl }: NetworkStatusProps) {
         </button>
       </div>
       <div className="text-xs mt-1 opacity-75">
-        RPC: {rpcUrl}
+        Status via Server API
         {lastCheck && (
           <div>Last check: {lastCheck.toLocaleTimeString()}</div>
         )}

@@ -600,7 +600,7 @@ export default function AuctionPage() {
       </div>
 
       {/* Network Status */}
-      <NetworkStatus rpcUrl={process.env.NEXT_PUBLIC_RPC_URL || 'https://rpc.testnet.andromedaprotocol.io'} />
+      <NetworkStatus />
 
       {/* Debug Panel */}
       {process.env.NODE_ENV === 'development' && (
