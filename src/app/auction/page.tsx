@@ -381,7 +381,7 @@ export default function AuctionPage() {
     addDebugLog(`Placing bid: ${bidAmount} for token ${tokenId}`);
 
     try {
-      const rpc = process.env.NEXT_PUBLIC_RPC_URL || process.env.NEXT_PUBLIC_CHAIN_RPC || 'https://rpc.testnet.andromedaprotocol.io';
+      const rpc = process.env.NEXT_PUBLIC_RPC_URL || process.env.NEXT_PUBLIC_CHAIN_RPC || 'http://137.184.182.11:26657';
       
       // Setup Keplr chain and get signer
       const offlineSigner = await setupKeplrChain();

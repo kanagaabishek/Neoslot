@@ -69,7 +69,7 @@ export default function AuctionMintPage() {
     addDebugLog("Starting auction NFT mint and auction creation process");
 
     try {
-      const rpc = process.env.NEXT_PUBLIC_RPC_URL || 'https://rpc.testnet.andromedaprotocol.io';
+      const rpc = process.env.NEXT_PUBLIC_RPC_URL || 'http://137.184.182.11:26657';
       
       // Setup Keplr chain and get signer
       const offlineSigner = await setupKeplrChain();

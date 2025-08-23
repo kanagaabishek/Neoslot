@@ -332,7 +332,7 @@ export default function MintPage() {
       await new Promise(resolve => setTimeout(resolve, 3000));
 
       // Verify the NFT listing on marketplace
-      const isListed = await verifyMarketplaceListing(tokenId, signingClient);
+      const isListed = await verifyMarketplaceListing(tokenId);
       if (isListed) {
         addDebugLog("🎉 NFT successfully minted and listed!");
         setSuccess(`NFT "${name}" minted and listed successfully! Token ID: ${tokenId}`);
@@ -377,7 +377,7 @@ export default function MintPage() {
     }
   };
 
-  const verifyMarketplaceListing = async (tokenId: string, signingClient: SigningCosmWasmClient) => {
+  const verifyMarketplaceListing = async (tokenId: string) => {
     try {
       addDebugLog("🔍 Verifying NFT listing on marketplace using server API...");
       
@@ -460,7 +460,7 @@ export default function MintPage() {
 
           {/* Network Status */}
           <div className="mb-4">
-            <NetworkStatus rpcUrl={process.env.NEXT_PUBLIC_CHAIN_RPC!} />
+            <NetworkStatus />
           </div>
 
           {error && (

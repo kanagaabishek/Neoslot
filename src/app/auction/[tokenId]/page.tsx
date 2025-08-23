@@ -313,7 +313,7 @@ export default function AuctionDetailsPage() {
     addDebugLog(`Placing bid: ${bidAmount} ${auction.coin_denom}`);
 
     try {
-      const rpc = process.env.NEXT_PUBLIC_RPC_URL || 'https://rpc.testnet.andromedaprotocol.io';
+      const rpc = process.env.NEXT_PUBLIC_RPC_URL || 'http://137.184.182.11:26657';
       
       // Get wallet from window.keplr
       if (!window.keplr) {
@@ -389,7 +389,7 @@ export default function AuctionDetailsPage() {
     addDebugLog(`Claiming auction for token: ${tokenId}`);
 
     try {
-      const rpc = process.env.NEXT_PUBLIC_RPC_URL || 'https://rpc.testnet.andromedaprotocol.io';
+      const rpc = process.env.NEXT_PUBLIC_RPC_URL || 'http://137.184.182.11:26657';
       
       // Get wallet from window.keplr
       if (!window.keplr) {
