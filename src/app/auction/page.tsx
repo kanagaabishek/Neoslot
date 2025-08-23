@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
-import { getSigningClient, getQueryClient } from '../utils/andrClient';
+import { getSigningClient } from '../utils/andrClient';
 import { setupKeplrChain } from '../utils/keplrChain';
 import BlockchainAPI from '../utils/blockchainAPI';
 import WalletPrompt from '../components/WalletPrompt';
@@ -13,6 +13,21 @@ import { useWallet } from '../hooks/useWallet';
 // Environment variables
 const cw721 = process.env.NEXT_PUBLIC_CW721_ADDRESS!;
 const auctionContract = process.env.NEXT_PUBLIC_AUCTION_ADDRESS || "andr1j2gwn97plye7h0xh0j2g8e7huwr6f3jqzrln64c7aqwlrg3n2ueq0p0zss";
+
+interface AuctionApiData {
+  auction_id: string;
+  token_id: string;
+  start_time: { at_time: string };
+  end_time: { at_time: string };
+  owner: string;
+  recipient?: { address: string };
+  min_bid?: string;
+  high_bidder_addr?: string;
+  high_bidder_amount?: string;
+  coin_denom: string;
+  is_cancelled?: boolean;
+  metadata?: Record<string, unknown>;
+}
 
 interface AuctionNFT {
   token_id: string;
@@ -259,7 +274,7 @@ export default function AuctionPage() {
       addDebugLog(`Server API returned ${auctionData.length} auctions`);
       
       // Process auction data from server API
-      const processedAuctions = auctionData.map((auction: any) => {
+      const processedAuctions = auctionData.map((auction: AuctionApiData) => {
         addDebugLog(`Processing auction ${auction.auction_id} for token ${auction.token_id}`);
         
         // Parse timestamps from nanoseconds to milliseconds

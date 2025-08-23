@@ -76,7 +76,7 @@ export async function POST(request: NextRequest) {
               metadata: null
             });
             
-          } catch (err) {
+          } catch {
             console.log(`Server: Sale ${i} not found, stopping search`);
             // Sale doesn't exist, break
             break;
@@ -120,7 +120,7 @@ export async function POST(request: NextRequest) {
                     nft_info: { token_id: token_id }
                   });
                   metadata = nftInfo.extension;
-                } catch (metadataError) {
+                } catch {
                   console.log(`Server: Failed to get metadata for token ${token_id}`);
                 }
                 
@@ -170,7 +170,7 @@ export async function POST(request: NextRequest) {
               auction_info: { auction_id: auctionId }
             });
           }
-        } catch (err) {
+        } catch {
           console.log("Server: auction_ids method failed, trying auction_infos_for_address");
         }
 
@@ -183,7 +183,7 @@ export async function POST(request: NextRequest) {
             
             // eslint-disable-next-line @typescript-eslint/no-explicit-any
             auctionDetails = allAuctionsResponse.auctions?.find((a: any) => a.token_id === params.tokenId);
-          } catch (err) {
+          } catch {
             console.log("Server: auction_infos_for_address method also failed");
           }
         }
@@ -267,7 +267,7 @@ export async function POST(request: NextRequest) {
                   coinDenom: saleState.coin_denom
                 };
               }
-            } catch (saleError) {
+            } catch {
               console.log(`Server: No sale found for NFT ${tokenId} (expected for non-listed NFTs)`);
             }
             
@@ -276,7 +276,7 @@ export async function POST(request: NextRequest) {
               metadata: nftInfo.extension,
               saleInfo
             });
-          } catch (err) {
+          } catch {
             // Skip this NFT if metadata fetch fails
             console.warn(`Server: Failed to fetch metadata for token ${tokenId}`);
           }
@@ -341,7 +341,7 @@ export async function POST(request: NextRequest) {
               coinDenom: saleState.coin_denom
             };
           }
-        } catch (saleError) {
+        } catch {
           console.log("Server: No sale found for this NFT (expected for non-listed NFTs)");
         }
 

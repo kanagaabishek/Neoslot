@@ -3,7 +3,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import { getSigningClient, getQueryClient } from '../../utils/andrClient';
-import { setupKeplrChain } from '../../utils/keplrChain';
 import { stringifyTransactionResult } from "../../utils/serializer";
 import WalletPrompt from '../../components/WalletPrompt';
 import NetworkStatus from '../../components/NetworkStatus';
