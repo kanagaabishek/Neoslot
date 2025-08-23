@@ -8,6 +8,7 @@ import WalletPrompt from '../components/WalletPrompt';
 import NetworkStatus from '../components/NetworkStatus';
 import DebugPanel from '../components/DebugPanel';
 import MarketplaceViewer from '../components/MarketplaceViewer';
+import BlockchainAPI from '../utils/blockchainAPI';
 import { useWallet } from '../hooks/useWallet';
 
 // Environment variables
@@ -215,26 +216,34 @@ export default function MintPage() {
         console.warn("Could not check balance:", balanceErr);
       }
 
-      // Test contract connectivity
+      // Test contract connectivity using server API
       try {
-        const contractInfo = await signingClient.queryContractSmart(cw721, { contract_info: {} });
+        addDebugLog("Testing CW721 contract connectivity via server API...");
+        const contractInfo = await BlockchainAPI.getContractInfo(cw721);
         console.log("CW721 Contract info:", contractInfo);
+        addDebugLog(`✅ CW721 Contract: ${contractInfo.name || 'Unknown'} (${contractInfo.symbol || 'No Symbol'})`);
       } catch (queryErr) {
         console.log("Could not query CW721 contract info:", queryErr);
+        addDebugLog(`⚠️ Could not verify CW721 contract: ${queryErr instanceof Error ? queryErr.message : String(queryErr)}`);
       }
 
-      // Test marketplace connectivity with correct query
+      // Test marketplace connectivity using server API
       try {
-        const owner = await signingClient.queryContractSmart(marketplace, { owner: {} });
+        addDebugLog("Testing Marketplace contract connectivity via server API...");
+        const owner = await BlockchainAPI.getMarketplaceOwner();
         console.log("Marketplace owner:", owner);
+        addDebugLog(`✅ Marketplace Owner: ${owner.owner || 'Unknown'}`);
       } catch (queryErr) {
         console.log("Could not query marketplace owner:", queryErr);
+        addDebugLog(`⚠️ Could not verify marketplace owner: ${queryErr instanceof Error ? queryErr.message : String(queryErr)}`);
         // Try to get marketplace type
         try {
-          const marketplaceType = await signingClient.queryContractSmart(marketplace, { type: {} });
+          const marketplaceType = await BlockchainAPI.getMarketplaceType();
           console.log("Marketplace type:", marketplaceType);
+          addDebugLog(`✅ Marketplace Type: ${marketplaceType.identifier || 'Unknown'}`);
         } catch (typeErr) {
           console.warn("Could not query marketplace type:", typeErr);
+          addDebugLog(`⚠️ Could not verify marketplace type: ${typeErr instanceof Error ? typeErr.message : String(typeErr)}`);
         }
       }
 
@@ -370,69 +379,58 @@ export default function MintPage() {
 
   const verifyMarketplaceListing = async (tokenId: string, signingClient: SigningCosmWasmClient) => {
     try {
-      addDebugLog("🔍 Verifying NFT listing on marketplace...");
+      addDebugLog("🔍 Verifying NFT listing on marketplace using server API...");
       
-      // Try multiple verification approaches
+      // Try multiple verification approaches using server API
       
       // Approach 1: Query sale_ids for this specific token
       try {
-        const saleIds = await signingClient.queryContractSmart(marketplace, {
-          sale_ids: {
-            token_address: cw721,
-            token_id: tokenId
-          }
-        });
+        addDebugLog("Checking sale IDs via server API...");
+        const saleIds = await BlockchainAPI.getSaleIds(tokenId);
         
         if (saleIds.sale_ids && saleIds.sale_ids.length > 0) {
           addDebugLog(`✅ NFT is listed with sale ID: ${saleIds.sale_ids[0]}`);
           
           // Get the sale state details
-          const saleState = await signingClient.queryContractSmart(marketplace, {
-            sale_state: { sale_id: saleIds.sale_ids[0] }
-          });
+          const saleState = await BlockchainAPI.getSaleState(saleIds.sale_ids[0]);
           
           addDebugLog(`Sale details: Price=${saleState.price} ${saleState.coin_denom}, Status=${saleState.status}`);
           return true;
+        } else {
+          addDebugLog("No sale IDs found for this token");
         }
       } catch (err) {
-        addDebugLog(`Could not query sale_ids: ${err instanceof Error ? err.message : String(err)}`);
+        addDebugLog(`Could not query sale_ids via server API: ${err instanceof Error ? err.message : String(err)}`);
       }
       
       // Approach 2: Query latest sale state for this token
       try {
-        const latestSale = await signingClient.queryContractSmart(marketplace, {
-          latest_sale_state: {
-            token_address: cw721,
-            token_id: tokenId
-          }
-        });
+        addDebugLog("Checking latest sale via server API...");
+        const latestSale = await BlockchainAPI.getLatestSale(tokenId);
         
-        addDebugLog(`✅ Found latest sale: Price=${latestSale.price}, Status=${latestSale.status}`);
-        return true;
-      } catch (err) {
-        addDebugLog(`Could not query latest_sale_state: ${err instanceof Error ? err.message : String(err)}`);
-      }
-      
-      // Approach 3: Check if we can find the sale in sale_infos_for_address
-      try {
-        const saleInfos = await signingClient.queryContractSmart(marketplace, {
-          sale_infos_for_address: {
-            token_address: cw721,
-            start_after: null,
-            limit: 50
-          }
-        });
-        
-        const foundSale = saleInfos.find((info: Record<string, unknown>) => 
-          info.sale_ids && Array.isArray(info.sale_ids) && info.sale_ids.length > 0
-        );
-        
-        if (foundSale) {
-          addDebugLog(`✅ Found sale in sale_infos_for_address`);
+        if (latestSale) {
+          addDebugLog(`✅ Found latest sale: Price=${latestSale.price}, Status=${latestSale.status}`);
           return true;
+        } else {
+          addDebugLog("No latest sale found for this token");
         }
       } catch (err) {
-        addDebugLog(`Could not query sale_infos_for_address: ${err instanceof Error ? err.message : String(err)}`);
+        addDebugLog(`Could not query latest_sale_state via server API: ${err instanceof Error ? err.message : String(err)}`);
+      }
+      
+      // Approach 3: Check sale infos for this token
+      try {
+        addDebugLog("Checking sale infos via server API...");
+        const saleInfos = await BlockchainAPI.getSaleInfos(tokenId);
+        
+        if (saleInfos.sales && saleInfos.sales.length > 0) {
+          addDebugLog(`✅ Found ${saleInfos.sales.length} sale(s) for this token`);
+          return true;
+        } else {
+          addDebugLog("No sale infos found for this token");
+        }
+      } catch (err) {
+        addDebugLog(`Could not query sale_infos via server API: ${err instanceof Error ? err.message : String(err)}`);
       }
       
       addDebugLog("⚠️ Could not verify NFT listing - it may take a moment to appear");

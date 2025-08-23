@@ -69,6 +69,42 @@ class BlockchainAPI {
     return result;
   }
 
+  // New methods for mint page
+  static async getContractInfo(address: string) {
+    const result = await this.request('contract_info', { address });
+    return result;
+  }
+
+  static async getMarketplaceOwner() {
+    const result = await this.request('marketplace_owner');
+    return result;
+  }
+
+  static async getMarketplaceType() {
+    const result = await this.request('marketplace_type');
+    return result;
+  }
+
+  static async getLatestSale(tokenId: string) {
+    const result = await this.request('latest_sale', { tokenId });
+    return result;
+  }
+
+  static async getSaleIds(tokenId: string) {
+    const result = await this.request('sale_ids', { tokenId });
+    return result;
+  }
+
+  static async getSaleState(saleId: string) {
+    const result = await this.request('sale_state', { saleId });
+    return result;
+  }
+
+  static async getSaleInfos(tokenId: string) {
+    const result = await this.request('sale_infos', { tokenId });
+    return result;
+  }
+
   static async getUserNFTs(address: string) {
     const result = await this.request('user_nfts', { address });
     return result.nfts || [];

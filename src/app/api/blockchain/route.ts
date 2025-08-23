@@ -353,6 +353,87 @@ export async function POST(request: NextRequest) {
         };
         break;
 
+      case 'contract_info':
+        console.log("Server: Fetching contract info for:", params?.address);
+        if (!params?.address) {
+          throw new Error("Contract address is required for contract info");
+        }
+        
+        const contractInfo = await client.queryContractSmart(params.address, { contract_info: {} });
+        result = contractInfo;
+        break;
+
+      case 'marketplace_owner':
+        console.log("Server: Fetching marketplace owner");
+        const marketplaceOwner = await client.queryContractSmart(MARKETPLACE_ADDRESS, { owner: {} });
+        result = marketplaceOwner;
+        break;
+
+      case 'marketplace_type':
+        console.log("Server: Fetching marketplace type");
+        const marketplaceType = await client.queryContractSmart(MARKETPLACE_ADDRESS, { type: {} });
+        result = marketplaceType;
+        break;
+
+      case 'latest_sale':
+        console.log("Server: Fetching latest sale");
+        try {
+          const latestSale = await client.queryContractSmart(MARKETPLACE_ADDRESS, {
+            latest_sale_state: { token_id: params?.tokenId, token_address: CW721_ADDRESS }
+          });
+          result = latestSale;
+        } catch (error) {
+          console.log("Server: No latest sale found:", error);
+          result = null;
+        }
+        break;
+
+      case 'sale_ids':
+        console.log("Server: Fetching sale IDs for token:", params?.tokenId);
+        if (!params?.tokenId) {
+          throw new Error("Token ID is required for sale IDs");
+        }
+        
+        try {
+          const saleIds = await client.queryContractSmart(MARKETPLACE_ADDRESS, {
+            sale_ids: { token_id: params.tokenId, token_address: CW721_ADDRESS }
+          });
+          result = saleIds;
+        } catch (error) {
+          console.log("Server: No sale IDs found:", error);
+          result = { sale_ids: [] };
+        }
+        break;
+
+      case 'sale_state':
+        console.log("Server: Fetching sale state for ID:", params?.saleId);
+        if (!params?.saleId) {
+          throw new Error("Sale ID is required for sale state");
+        }
+        
+        const saleState = await client.queryContractSmart(MARKETPLACE_ADDRESS, {
+          sale_state: { sale_id: params.saleId }
+        });
+        result = saleState;
+        break;
+
+      case 'sale_infos':
+        console.log("Server: Fetching sale infos for token:", params?.tokenId);
+        if (!params?.tokenId) {
+          throw new Error("Token ID is required for sale infos");
+        }
+        
+        try {
+          const saleInfos = await client.queryContractSmart(MARKETPLACE_ADDRESS, {
+            sale_infos: { token_id: params.tokenId, token_address: CW721_ADDRESS }
+          });
+          result = saleInfos;
+        } catch (error) {
+          console.log("Server: No sale infos found:", error);
+          result = { sales: [] };
+        }
+        break;
+
       default:
         throw new Error(`Unknown request type: ${type}`);
     }
