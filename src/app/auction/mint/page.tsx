@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { getSigningClient } from '../../utils/andrClient';
+import { getSigningClient, getProductionSafeRPC } from '../../utils/andrClient';
 import { setupKeplrChain } from '../../utils/keplrChain';
 import { stringifyTransactionResult } from '../../utils/serializer';
 import WalletPrompt from '../../components/WalletPrompt';
@@ -69,7 +69,10 @@ export default function AuctionMintPage() {
     addDebugLog("Starting auction NFT mint and auction creation process");
 
     try {
-      const rpc = process.env.NEXT_PUBLIC_RPC_URL || 'http://137.184.182.11:26657';
+      // Use production-safe RPC endpoint
+      addDebugLog("Getting production-safe RPC endpoint...");
+      const rpc = getProductionSafeRPC();
+      addDebugLog(`Using RPC: ${rpc}`);
       
       // Setup Keplr chain and get signer
       const offlineSigner = await setupKeplrChain();
