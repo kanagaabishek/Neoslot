@@ -13,12 +13,11 @@ const marketplace = process.env.NEXT_PUBLIC_MARKETPLACE_ADDRESS!;
 
 interface NFTSale {
   saleId: string;
-  tokenId: string;
   price: string;
   seller: string;
   status: string;
   coinDenom: string;
-  isSold: boolean;
+  tokenId: string;
   metadata?: {
     name?: string;
     description?: string;
@@ -26,212 +25,52 @@ interface NFTSale {
     start_time?: string;
     meeting_link?: string;
     event_type?: string;
-  };
+  } | null;
 }
 
 export default function Home() {
-  const { address, isConnected } = useWallet();
+  const { address, isConnected, connectWallet } = useWallet();
   const [nfts, setNFTs] = useState<NFTSale[]>([]);
-  const [loading, setLoading] = useState<boolean>(false);
-  const [error, setError] = useState<string>("");
-
-  // Check if environment variables are set
-  useEffect(() => {
-    if (!cw721 || !marketplace) {
-      setError("Missing environment variables. Please check your .env.local file.");
-    }
-  }, []);
-
-  // Debug environment variables
-  useEffect(() => {
-    console.log('🔧 Environment variables check:');
-    console.log('NEXT_PUBLIC_RPC_URL:', process.env.NEXT_PUBLIC_RPC_URL);
-    console.log('NEXT_PUBLIC_CHAIN_RPC:', process.env.NEXT_PUBLIC_CHAIN_RPC);
-    console.log('NEXT_PUBLIC_CHAIN_ID:', process.env.NEXT_PUBLIC_CHAIN_ID);
-    console.log('NEXT_PUBLIC_CW721_ADDRESS:', process.env.NEXT_PUBLIC_CW721_ADDRESS);
-    console.log('NEXT_PUBLIC_MARKETPLACE_ADDRESS:', process.env.NEXT_PUBLIC_MARKETPLACE_ADDRESS);
-  }, []);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
 
   const fetchNFTs = async () => {
     // Only run on client side
     if (typeof window === 'undefined') return;
     
-    const rpc = '';
     try {
       setLoading(true);
       setError("");
       
       console.log('Loading NFT sales via server API...');
       
-      try {
-        const salesData = await BlockchainAPI.getMarketplaceSales();
-        console.log('Successfully loaded sales:', salesData.length);
-        
-        // Convert to NFTSale format
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const nftSales = salesData.map((sale: any) => ({
-          sale_id: sale.sale_id,
-          token_id: sale.token_id,
-          seller: sale.seller,
-          price: sale.price,
-          coin_denom: sale.coin_denom || 'uandr',
-          metadata: sale.metadata,
-          status: sale.status || 'active'
-        }));
-        
-        setNFTs(nftSales);
-        
-      } catch (serverError) {
-        console.error('Server API failed:', serverError);
-        throw new Error(`Failed to load NFT data. ${serverError instanceof Error ? serverError.message : 'Server error'}`);
-      }
-      console.log('Querying marketplace for sales...');
+      // Get marketplace sales using the server API
+      const salesData = await BlockchainAPI.getMarketplaceSales();
       
-      let saleInfosResponse;
-      try {
-        saleInfosResponse = await Promise.race([
-          client.queryContractSmart(marketplace, {
-            sale_infos_for_address: { 
-              token_address: cw721,
-              start_after: null,
-              limit: 50 // Get up to 50 sales
-            }
-          }),
-          new Promise((_, reject) => 
-            setTimeout(() => reject(new Error('Marketplace query timeout')), 15000)
-          )
-        ]);
-      } catch (marketplaceError) {
-        console.error('Marketplace query failed:', marketplaceError);
-        throw new Error('Failed to fetch marketplace data. The marketplace contract may be unavailable.');
-      }
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const nftSales = salesData.map((sale: any) => ({
+        saleId: sale.sale_id,
+        price: sale.price,
+        seller: sale.recipient?.address || 'Unknown',
+        status: sale.status,
+        coinDenom: sale.coin_denom,
+        tokenId: sale.token_id,
+        metadata: sale.metadata || null
+      }));
       
-      console.log('Sale infos response:', saleInfosResponse);
+      setNFTs(nftSales);
       
-      if (!saleInfosResponse || saleInfosResponse.length === 0) {
-        console.log('No sales found');
-        setNFTs([]);
-        return;
-      }
-
-      // Fetch detailed sale state for each sale
-      const salesPromises = saleInfosResponse.flatMap((info: Record<string, unknown>) => 
-        (info.sale_ids as string[]).map(async (saleId: string) => {
-          try {
-            console.log(`Fetching sale state for sale ID: ${saleId}`);
-            
-            // Add timeout and retry logic
-            let saleState;
-            try {
-              saleState = await Promise.race([
-                client.queryContractSmart(marketplace, {
-                  sale_state: { sale_id: saleId }
-                }),
-                new Promise((_, reject) => 
-                  setTimeout(() => reject(new Error('Timeout')), 10000)
-                )
-              ]);
-              console.log(`Sale state for ${saleId}:`, saleState);
-            } catch (saleStateError) {
-              console.error(`Failed to fetch sale state for ${saleId}:`, saleStateError);
-              throw saleStateError;
-            }
-            
-            // Fetch NFT metadata from CW721 contract
-            let metadata = null;
-            try {
-              console.log(`Fetching NFT info for token: ${info.token_id}`);
-              const nftInfo = await Promise.race([
-                client.queryContractSmart(cw721, {
-                  nft_info: { token_id: info.token_id }
-                }),
-                new Promise((_, reject) => 
-                  setTimeout(() => reject(new Error('NFT info timeout')), 8000)
-                )
-              ]);
-              
-              // Parse metadata from token_uri or extension (same as NFT details page)
-              let parsedMetadata: Record<string, unknown> = {};
-              
-              if (nftInfo.token_uri) {
-                try {
-                  parsedMetadata = JSON.parse(nftInfo.token_uri);
-                } catch {
-                  // If parsing fails, treat as plain string
-                  parsedMetadata = { name: nftInfo.token_uri };
-                }
-              }
-              
-              if (nftInfo.extension) {
-                parsedMetadata = { ...parsedMetadata, ...nftInfo.extension };
-              }
-              
-              metadata = parsedMetadata;
-              console.log(`Metadata for token ${info.token_id}:`, metadata);
-            } catch (metadataError) {
-              console.warn(`Could not fetch metadata for token ${info.token_id}:`, metadataError);
-            }
-            
-            return {
-              saleId,
-              tokenId: info.token_id as string,
-              price: saleState.price,
-              status: saleState.status,
-              seller: saleState.recipient?.address,
-              coinDenom: saleState.coin_denom,
-              isSold: saleState.status === 'executed',
-              metadata: metadata as NFTSale['metadata']
-            };
-          } catch (error) {
-            console.error(`Error fetching sale ${saleId}:`, {
-              error: error instanceof Error ? error.message : String(error),
-              saleId,
-              tokenId: info.token_id
-            });
-            // Return null so we can filter it out, but don't crash the entire fetch
-            return null;
-          }
-        })
-      );
-
-      console.log(`Processing ${salesPromises.length} sales...`);
-      
-      // Use Promise.allSettled to handle individual failures gracefully
-      const salesResults = await Promise.allSettled(salesPromises);
-      const validSales = salesResults
-        .filter((result): result is PromiseFulfilledResult<NFTSale | null> => 
-          result.status === 'fulfilled' && result.value !== null
-        )
-        .map(result => result.value);
-      
-      console.log(`Successfully loaded ${validSales.length} out of ${salesPromises.length} sales`);
-      setNFTs(validSales as NFTSale[]);
-
-      // Show a warning if some sales failed to load
-      if (validSales.length < salesPromises.length) {
-        const failedCount = salesPromises.length - validSales.length;
-        console.warn(`${failedCount} sales failed to load`);
-      }
-
-    } catch (err) {
-      console.error("Error fetching NFTs:", err);
-      console.error("Error details:", {
-        message: err instanceof Error ? err.message : String(err),
-        stack: err instanceof Error ? err.stack : undefined,
-        rpc,
-        cw721,
-        marketplace
-      });
-      setError(`Failed to fetch NFTs: ${err instanceof Error ? err.message : String(err)}`);
+    } catch (serverError) {
+      console.error('Server API failed:', serverError);
+      setError(`Failed to load NFT data. ${serverError instanceof Error ? serverError.message : 'Server error'}`);
     } finally {
       setLoading(false);
     }
   };
 
-  const buyNFT = async (saleId: string, price: string) => {
+  const buyNFT = async (saleId: string, price: string, coinDenom: string) => {
     if (!isConnected || typeof window === 'undefined') return;
 
-    const rpc = '';
     try {
       setLoading(true);
       setError("");
@@ -253,115 +92,228 @@ export default function Home() {
         },
         "auto",
         undefined,
-        [{ amount: price, denom: "uandr" }]
+        [{ amount: price, denom: coinDenom }]
       );
 
       console.log("Bought NFT!", result);
-      alert("Bought successfully!");
-      fetchNFTs(); // refresh
+      alert("NFT purchased successfully!");
+      
+      // Refresh the NFT list
+      fetchNFTs();
+      
     } catch (err) {
       console.error("Error buying NFT:", err);
-      console.error("Buy error details:", {
-        message: err instanceof Error ? err.message : String(err),
-        stack: err instanceof Error ? err.stack : undefined,
-        saleId,
-        price,
-        rpc
-      });
-      setError(`Failed to buy NFT: ${err instanceof Error ? err.message : String(err)}`);
+      setError("Failed to buy NFT. Please try again.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const mintNFT = async () => {
+    if (!isConnected || typeof window === 'undefined') return;
+
+    try {
+      setLoading(true);
+      setError("");
+
+      const rpcUrl = process.env.NEXT_PUBLIC_RPC_URL || process.env.NEXT_PUBLIC_CHAIN_RPC!;
+      
+      // Setup Keplr chain and get signer
+      const offlineSigner = await setupKeplrChain();
+      
+      const signingClient = await getSigningClient(rpcUrl, offlineSigner);
+
+      // Simple mint with basic metadata
+      const mintMsg = {
+        mint: {
+          token_id: Date.now().toString(),
+          owner: address,
+          token_uri: JSON.stringify({
+            name: `NFT #${Date.now()}`,
+            description: "A test NFT from NeoSlot",
+            image: "https://via.placeholder.com/400x400?text=NFT"
+          })
+        }
+      };
+
+      const result = await signingClient.execute(
+        address,
+        cw721,
+        mintMsg,
+        "auto"
+      );
+
+      console.log("Minted NFT!", result);
+      alert("NFT minted successfully!");
+      
+    } catch (err) {
+      console.error("Error minting NFT:", err);
+      setError("Failed to mint NFT. Please try again.");
     } finally {
       setLoading(false);
     }
   };
 
   useEffect(() => {
-    // Only run on client side
-    if (typeof window !== 'undefined' && !error && cw721 && marketplace) {
-      fetchNFTs();
-    }
+    fetchNFTs();
   }, []);
 
+  // Filter NFTs for different categories
+  const availableNFTs = nfts.filter(nft => nft.status === 'open');
+  const soldNFTs = nfts.filter(nft => nft.status === 'executed');
+
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100">
-      <div className="px-4 py-8 sm:px-6 sm:py-12 lg:py-16 max-w-6xl mx-auto">
-        <div className="mb-12 sm:mb-16 text-center">
-          <h1 className="text-3xl sm:text-4xl lg:text-6xl font-bold text-black mb-4 sm:mb-6">Welcome to NeoSlot Marketplace</h1>
-          <p className="text-gray-600 text-base sm:text-lg max-w-2xl mx-auto px-4">Discover, collect, and trade unique NFTs on the Andromeda blockchain</p>
+    <main className="min-h-screen bg-gray-50">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        
+        {/* Header */}
+        <div className="text-center mb-12">
+          <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold text-black mb-4">
+            NeoSlot
+          </h1>
+          <p className="text-xl text-gray-600 mb-8">
+            NFT Marketplace & Auction Platform on Andromeda
+          </p>
+          
+          {/* Wallet Connection */}
+          <WalletPrompt />
+          
+          {/* Action Buttons */}
+          {isConnected && (
+            <div className="flex flex-col sm:flex-row gap-4 justify-center mt-8">
+              <button
+                onClick={mintNFT}
+                disabled={loading}
+                className="px-6 py-3 bg-black text-white rounded-lg hover:bg-gray-800 transition-colors disabled:opacity-50"
+              >
+                {loading ? 'Processing...' : 'Mint NFT'}
+              </button>
+              <Link
+                href="/mint"
+                className="px-6 py-3 bg-white border border-black text-black rounded-lg hover:bg-gray-50 transition-colors text-center"
+              >
+                Advanced Mint
+              </Link>
+              <Link
+                href="/profile"
+                className="px-6 py-3 bg-white border border-black text-black rounded-lg hover:bg-gray-50 transition-colors text-center"
+              >
+                My NFTs
+              </Link>
+            </div>
+          )}
         </div>
 
-      {error && (
-        <div className="bg-red-50 border border-red-300 text-red-800 px-4 sm:px-6 py-4 rounded-xl mb-6 sm:mb-8">
-          <div className="flex items-start">
-            <div className="flex-shrink-0">
-              <svg className="h-5 w-5 text-red-400 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z" />
-              </svg>
+        {/* Error Display */}
+        {error && (
+          <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-6">
+            <p className="font-medium">Error:</p>
+            <p>{error}</p>
+            <button 
+              onClick={fetchNFTs}
+              className="mt-2 px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700 transition-colors"
+            >
+              Retry
+            </button>
+          </div>
+        )}
+
+        {/* Loading State */}
+        {loading && (
+          <div className="text-center py-12">
+            <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-black"></div>
+            <p className="mt-4 text-gray-600">Loading NFTs...</p>
+          </div>
+        )}
+
+        {/* NFT Grid */}
+        {!loading && (
+          <>
+            {/* Available NFTs Section */}
+            <div className="mb-12">
+              <h2 className="text-3xl font-bold text-black mb-6">Available NFTs ({availableNFTs.length})</h2>
+              {availableNFTs.length === 0 ? (
+                <div className="text-center py-12 bg-white rounded-lg border">
+                  <p className="text-gray-500 text-lg">No NFTs available for sale</p>
+                  <button 
+                    onClick={fetchNFTs}
+                    className="mt-4 px-6 py-2 bg-black text-white rounded-lg hover:bg-gray-800 transition-colors"
+                  >
+                    Refresh
+                  </button>
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                  {availableNFTs.map((nft) => (
+                    <NFTCard
+                      key={`${nft.saleId}-${nft.tokenId}`}
+                      saleId={nft.saleId}
+                      tokenId={nft.tokenId}
+                      price={nft.price}
+                      seller={nft.seller}
+                      status={nft.status}
+                      coinDenom={nft.coinDenom}
+                      isSold={false}
+                      metadata={nft.metadata}
+                      onBuy={() => buyNFT(nft.saleId, nft.price, nft.coinDenom)}
+                    />
+                  ))}
+                </div>
+              )}
             </div>
-            <div className="ml-3 flex-1">
-              <p className="text-sm font-medium">{error}</p>
-              <div className="mt-2">
-                <button
-                  onClick={() => {
-                    setError("");
-                    fetchNFTs();
-                  }}
-                  className="text-sm bg-red-100 text-red-800 px-3 py-1 rounded hover:bg-red-200 transition-colors"
-                >
-                  Try Again
-                </button>
+
+            {/* Sold NFTs Section */}
+            {soldNFTs.length > 0 && (
+              <div>
+                <h2 className="text-3xl font-bold text-black mb-6">Recently Sold ({soldNFTs.length})</h2>
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                  {soldNFTs.map((nft) => (
+                    <NFTCard
+                      key={`${nft.saleId}-${nft.tokenId}`}
+                      saleId={nft.saleId}
+                      tokenId={nft.tokenId}
+                      price={nft.price}
+                      seller={nft.seller}
+                      status={nft.status}
+                      coinDenom={nft.coinDenom}
+                      isSold={true}
+                      metadata={nft.metadata}
+                      onBuy={() => {}} // No buy action for sold items
+                    />
+                  ))}
+                </div>
+              </div>
+            )}
+          </>
+        )}
+
+        {/* Statistics */}
+        {!loading && nfts.length > 0 && (
+          <div className="mt-12 bg-white rounded-lg border p-6">
+            <h3 className="text-xl font-bold text-black mb-4">Marketplace Stats</h3>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-center">
+              <div>
+                <p className="text-2xl font-bold text-black">{nfts.length}</p>
+                <p className="text-gray-600">Total NFTs</p>
+              </div>
+              <div>
+                <p className="text-2xl font-bold text-black">{availableNFTs.length}</p>
+                <p className="text-gray-600">Available</p>
+              </div>
+              <div>
+                <p className="text-2xl font-bold text-black">{soldNFTs.length}</p>
+                <p className="text-gray-600">Sold</p>
+              </div>
+              <div>
+                <p className="text-2xl font-bold text-black">
+                  {new Set(nfts.map(nft => nft.seller)).size}
+                </p>
+                <p className="text-gray-600">Sellers</p>
               </div>
             </div>
           </div>
-        </div>
-      )}
-
-      {!isConnected ? (
-        <WalletPrompt 
-          title="Welcome to NeoSlot Marketplace"
-          message="Connect your Keplr wallet to discover, collect, and trade unique NFTs on the Andromeda blockchain"
-        />
-      ) : (
-        <div className="bg-gray-50 border border-gray-200 px-4 py-3 rounded-lg mb-6 sm:mb-8">
-          <p className="text-black font-medium text-sm sm:text-base">Connected: {address}</p>
-        </div>
-      )}
-
-      <div className="mt-8 sm:mt-12 lg:mt-16">
-        {loading ? (
-          <div className="flex flex-col sm:flex-row items-center justify-center py-16 sm:py-24">
-            <div className="animate-spin rounded-full h-10 w-10 sm:h-12 sm:w-12 border-b-2 border-black mb-4 sm:mb-0"></div>
-            <p className="text-black ml-0 sm:ml-4 font-medium text-center">Loading NFTs...</p>
-          </div>
-        ) : nfts.length === 0 ? (
-          <div className="text-center py-16 sm:py-24">
-            <div className="text-gray-400 mb-6">
-              <svg className="w-16 h-16 sm:w-20 sm:h-20 mx-auto" fill="currentColor" viewBox="0 0 20 20">
-                <path fillRule="evenodd" d="M4 3a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V5a2 2 0 00-2-2H4zm12 12H4l4-8 3 6 2-4 3 6z" clipRule="evenodd" />
-              </svg>
-            </div>
-            <p className="text-black text-lg sm:text-xl font-medium mb-2">No NFTs found in the marketplace</p>
-            <p className="text-gray-600 text-sm">Be the first to mint and list your NFT!</p>
-          </div>
-        ) : (
-          <div className="grid gap-6 sm:gap-8 sm:grid-cols-2 lg:grid-cols-3">
-            {nfts.map((nft) => (
-              <NFTCard
-                key={nft.saleId}
-                saleId={nft.saleId}
-                tokenId={nft.tokenId}
-                price={nft.price}
-                seller={nft.seller}
-                status={nft.status}
-                coinDenom={nft.coinDenom}
-                isSold={nft.isSold}
-                metadata={nft.metadata}
-                onBuy={() => buyNFT(nft.saleId, nft.price)}
-              />
-            ))}
-          </div>
         )}
       </div>
-    </div>
-    </div>
+    </main>
   );
 }
