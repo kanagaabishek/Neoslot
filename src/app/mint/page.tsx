@@ -1,8 +1,7 @@
 "use client"
 
 import React, { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
-import { getSigningClient, getBestRpcEndpoint } from '../utils/andrClient';
+import { getSigningClient, getProductionSafeRPC } from '../utils/andrClient';
 import { setupKeplrChain } from '../utils/keplrChain';
 import { SigningCosmWasmClient } from '@cosmjs/cosmwasm-stargate';
 import WalletPrompt from '../components/WalletPrompt';
@@ -26,7 +25,6 @@ interface NFTMetadata {
 }
 
 export default function MintPage() {
-  const router = useRouter();
   const { address, isConnected } = useWallet();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -106,8 +104,8 @@ export default function MintPage() {
 
       addDebugLog("Starting MINT-ONLY process...");
       
-      addDebugLog("Finding best RPC endpoint...");
-      const rpcUrl = await getBestRpcEndpoint();
+      addDebugLog("Getting production-safe RPC endpoint...");
+      const rpcUrl = getProductionSafeRPC();
       addDebugLog(`Using RPC: ${rpcUrl}, Chain: ${process.env.NEXT_PUBLIC_CHAIN_ID}`);
       
       addDebugLog("Setting up Keplr chain...");
@@ -181,8 +179,8 @@ export default function MintPage() {
       setSuccess("");
       clearDebugLogs();
 
-      addDebugLog("Finding best RPC endpoint...");
-      const rpcUrl = await getBestRpcEndpoint();
+      addDebugLog("Getting production-safe RPC endpoint...");
+      const rpcUrl = getProductionSafeRPC();
       
       console.log("Environment check:", { rpc: rpcUrl, chainId: process.env.NEXT_PUBLIC_CHAIN_ID, cw721, marketplace });
       addDebugLog(`Environment check: RPC=${rpcUrl}, Chain=${process.env.NEXT_PUBLIC_CHAIN_ID}`);

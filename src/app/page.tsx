@@ -29,7 +29,7 @@ interface NFTSale {
 }
 
 export default function Home() {
-  const { address, isConnected, connectWallet } = useWallet();
+  const { address, isConnected } = useWallet();
   const [nfts, setNFTs] = useState<NFTSale[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -166,10 +166,6 @@ export default function Home() {
   useEffect(() => {
     fetchNFTs();
   }, []);
-
-  // Filter NFTs for different categories
-  const availableNFTs = nfts.filter(nft => nft.status === 'open');
-  const soldNFTs = nfts.filter(nft => nft.status === 'executed');
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100">

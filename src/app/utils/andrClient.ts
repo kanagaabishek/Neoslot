@@ -13,21 +13,22 @@ const FALLBACK_ENDPOINTS = [
   process.env.NEXT_PUBLIC_FALLBACK_RPC_4 || DEFAULT_RPC,
 ].filter(Boolean) as string[];
 
-// Check if we're in production and prioritize HTTPS endpoints
-const isProduction = process.env.NODE_ENV === 'production';
+// Check if we're in client context
 const isClient = typeof window !== 'undefined';
 
 // Get production-safe RPC endpoint
-const getProductionSafeRPC = (): string => {
+export const getProductionSafeRPC = (): string => {
   if (typeof window !== 'undefined' && window.location.protocol === 'https:') {
     // In HTTPS context, prioritize HTTPS RPC endpoints
     const httpsEndpoints = [PRIMARY_RPC, ...FALLBACK_ENDPOINTS].filter(url => url.startsWith('https:'));
     if (httpsEndpoints.length > 0) {
+      console.log('Using HTTPS RPC for production:', httpsEndpoints[0]);
       return httpsEndpoints[0];
     }
     // If no HTTPS endpoints available, use proxy or fallback to HTTP
     console.warn('No HTTPS RPC endpoints available, may cause mixed content issues in production');
   }
+  console.log('Using primary RPC:', PRIMARY_RPC);
   return PRIMARY_RPC;
 };
 
