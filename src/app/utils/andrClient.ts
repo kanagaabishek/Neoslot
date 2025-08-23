@@ -4,32 +4,57 @@ import { OfflineSigner } from "@cosmjs/proto-signing";
 // Default RPC endpoint (working endpoint)
 const DEFAULT_RPC = "http://137.184.182.11:26657";
 
+// Blacklist of known problematic endpoints
+const BLACKLISTED_ENDPOINTS = [
+  "https://rpc.testnet.andromedaprotocol.io",
+  "https://rpc-galileo.cosmos-apis.com", 
+  "https://andromeda-testnet-rpc.polkachu.com",
+];
+
+// Filter function to exclude problematic endpoints
+const filterValidEndpoints = (endpoints: (string | undefined)[]): string[] => {
+  return endpoints.filter((endpoint): endpoint is string => 
+    endpoint !== undefined && 
+    endpoint !== null &&
+    !BLACKLISTED_ENDPOINTS.includes(endpoint) &&
+    endpoint.trim().length > 0
+  );
+};
+
 // RPC endpoint configuration with multiple fallbacks
-const PRIMARY_RPC = process.env.NEXT_PUBLIC_RPC_URL || process.env.NEXT_PUBLIC_CHAIN_RPC || DEFAULT_RPC;
-const FALLBACK_ENDPOINTS = [
-  process.env.NEXT_PUBLIC_FALLBACK_RPC_1 || "https://rpc.testnet.andromedaprotocol.io",
-  process.env.NEXT_PUBLIC_FALLBACK_RPC_2 || DEFAULT_RPC,
-  process.env.NEXT_PUBLIC_FALLBACK_RPC_3 || DEFAULT_RPC,
-  process.env.NEXT_PUBLIC_FALLBACK_RPC_4 || DEFAULT_RPC,
-].filter(Boolean) as string[];
+const PRIMARY_RPC = filterValidEndpoints([
+  process.env.NEXT_PUBLIC_RPC_URL, 
+  process.env.NEXT_PUBLIC_CHAIN_RPC, 
+  DEFAULT_RPC
+])[0];
+
+const FALLBACK_ENDPOINTS = filterValidEndpoints([
+  process.env.NEXT_PUBLIC_FALLBACK_RPC_1,
+  process.env.NEXT_PUBLIC_FALLBACK_RPC_2,
+  process.env.NEXT_PUBLIC_FALLBACK_RPC_3,
+  process.env.NEXT_PUBLIC_FALLBACK_RPC_4,
+  DEFAULT_RPC, // Always include our working endpoint as final fallback
+]);
+
+console.log('RPC Configuration:', { PRIMARY_RPC, FALLBACK_ENDPOINTS });
 
 // Check if we're in client context
 const isClient = typeof window !== 'undefined';
 
 // Get production-safe RPC endpoint
 export const getProductionSafeRPC = (): string => {
-  if (typeof window !== 'undefined' && window.location.protocol === 'https:') {
-    // In HTTPS context, prioritize HTTPS RPC endpoints
-    const httpsEndpoints = [PRIMARY_RPC, ...FALLBACK_ENDPOINTS].filter(url => url.startsWith('https:'));
-    if (httpsEndpoints.length > 0) {
-      console.log('Using HTTPS RPC for production:', httpsEndpoints[0]);
-      return httpsEndpoints[0];
-    }
-    // If no HTTPS endpoints available, use proxy or fallback to HTTP
-    console.warn('No HTTPS RPC endpoints available, may cause mixed content issues in production');
+  // Always use the working endpoint, never use blacklisted endpoints
+  const safeEndpoint = PRIMARY_RPC || DEFAULT_RPC;
+  
+  console.log('Selected RPC endpoint:', safeEndpoint);
+  
+  // Double-check that we're not using a blacklisted endpoint
+  if (BLACKLISTED_ENDPOINTS.includes(safeEndpoint)) {
+    console.warn('Detected blacklisted endpoint, falling back to default:', DEFAULT_RPC);
+    return DEFAULT_RPC;
   }
-  console.log('Using primary RPC:', PRIMARY_RPC);
-  return PRIMARY_RPC;
+  
+  return safeEndpoint;
 };
 
 // Helper function to test RPC connectivity with shorter timeout for production
@@ -91,7 +116,7 @@ export const testProxyConnectivity = async (): Promise<boolean> => {
 export const getBestRpcEndpoint = async (): Promise<string> => {
   console.log("🔍 Testing RPC endpoints for best connectivity...");
   
-  // Use production-safe RPC first
+  // Use production-safe RPC first (which already filters out blacklisted endpoints)
   const primaryEndpoint = getProductionSafeRPC();
   
   // Test primary endpoint first
@@ -100,32 +125,22 @@ export const getBestRpcEndpoint = async (): Promise<string> => {
     return primaryEndpoint;
   }
   
-  // Try all endpoints, prioritizing HTTPS in production
+  // Try fallback endpoints (but skip blacklisted ones)
   console.log("⚠️ Primary RPC failed, trying fallback endpoints...");
-  const allEndpoints = [PRIMARY_RPC, ...FALLBACK_ENDPOINTS];
+  const safeEndpoints = FALLBACK_ENDPOINTS.filter(endpoint => 
+    endpoint && !BLACKLISTED_ENDPOINTS.includes(endpoint)
+  );
   
-  // In HTTPS context, try HTTPS endpoints first
-  if (typeof window !== 'undefined' && window.location.protocol === 'https:') {
-    const httpsEndpoints = allEndpoints.filter(url => url.startsWith('https:'));
-    for (const endpoint of httpsEndpoints) {
-      if (endpoint && await testRpcConnectivity(endpoint)) {
-        console.log("✅ Using HTTPS fallback RPC:", endpoint);
-        return endpoint;
-      }
-    }
-  }
-  
-  // Try remaining endpoints
-  for (const endpoint of allEndpoints) {
-    if (endpoint && await testRpcConnectivity(endpoint)) {
-      console.log("✅ Using fallback RPC:", endpoint);
+  for (const endpoint of safeEndpoints) {
+    if (await testRpcConnectivity(endpoint)) {
+      console.log("✅ Using safe fallback RPC:", endpoint);
       return endpoint;
     }
   }
   
-  // If all fail, return primary as last resort
-  console.log("⚠️ All endpoints failed, using primary as last resort");
-  return primaryEndpoint;
+  // If all fail, return our known working endpoint as last resort
+  console.log("⚠️ All endpoints failed, using known working endpoint as last resort");
+  return DEFAULT_RPC;
 };
 
 export const getQueryClient = async (rpcUrl?: string) => {
