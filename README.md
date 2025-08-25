@@ -61,6 +61,46 @@ npm run dev
 - `NEXT_PUBLIC_CW721_ADDRESS`: NFT contract address
 - `NEXT_PUBLIC_MARKETPLACE_ADDRESS`: Marketplace contract address
 
+## Environment Configuration
+
+The application requires environment variables to connect to the Andromeda blockchain and smart contracts. Create a `.env.local` file in the root directory with the following variables:
+
+```env
+# RPC Configuration
+NEXT_PUBLIC_RPC_URL=http://137.184.182.11:26657
+NEXT_PUBLIC_CHAIN_RPC=http://137.184.182.11:26657
+NEXT_PUBLIC_CHAIN_REST=http://137.184.182.11:1317
+
+# Fallback RPCs (optional)
+NEXT_PUBLIC_FALLBACK_RPC_1=http://137.184.182.11:26657
+NEXT_PUBLIC_FALLBACK_RPC_2=http://137.184.182.11:26657
+NEXT_PUBLIC_FALLBACK_RPC_3=http://137.184.182.11:26657
+NEXT_PUBLIC_FALLBACK_RPC_4=http://137.184.182.11:26657
+
+# Chain Configuration
+NEXT_PUBLIC_CHAIN_ID=galileo-4
+
+# Contract Addresses
+NEXT_PUBLIC_CW721_ADDRESS=andr1tkjswumejtgqd9f0atw8ve0qlfswrmn2202wv45gp40rt8ch7fvs6e83lu
+NEXT_PUBLIC_MARKETPLACE_ADDRESS=andr1pux5demcm9xwcsdwshg6splta5ajrkq26w4tkf636vnaa8k49zxqnxlnfg
+NEXT_PUBLIC_AUCTION_ADDRESS=andr1j2gwn97plye7h0xh0j2g8e7huwr6f3jqzrln64c7aqwlrg3n2ueq0p0zss
+```
+
+### Environment File Priority
+Next.js loads environment files in this order:
+1. `.env.local` (highest priority, git-ignored)
+2. `.env` (lower priority)
+
+**Note**: Use `.env.local` for your actual configuration to avoid committing sensitive data to git.
+
+### Testing Environment Configuration
+Run the environment test script to verify your configuration:
+```bash
+node test-env.js
+```
+
+Or visit `/debug-env` in your browser when the dev server is running to see the current environment state.
+
 ## Smart Contract Integration
 
 ### NFT Minting Process

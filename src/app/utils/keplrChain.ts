@@ -1,10 +1,11 @@
 // Keplr chain configuration utilities
+import ENV from './env';
 
 export const ANDROMEDA_CHAIN_CONFIG = {
-  chainId: process.env.NEXT_PUBLIC_CHAIN_ID || "galileo-4",
+  chainId: ENV.CHAIN_ID,
   chainName: "Andromeda Testnet",
-  rpc: process.env.NEXT_PUBLIC_RPC_URL || "http://137.184.182.11:26657",
-  rest: process.env.NEXT_PUBLIC_CHAIN_REST || "http://137.184.182.11:1317",
+  rpc: ENV.RPC_URL,
+  rest: ENV.CHAIN_REST,
   bip44: {
     coinType: 118,
   },
@@ -50,7 +51,7 @@ export const setupKeplrChain = async () => {
     throw new Error("Keplr extension not found");
   }
 
-  const chainId = process.env.NEXT_PUBLIC_CHAIN_ID || "galileo-4";
+  const chainId = ENV.CHAIN_ID;
   
   try {
     // Try to enable the chain first
@@ -61,8 +62,8 @@ export const setupKeplrChain = async () => {
       await window.keplr.experimentalSuggestChain({
         ...ANDROMEDA_CHAIN_CONFIG,
         chainId,
-        rpc: process.env.NEXT_PUBLIC_RPC_URL || ANDROMEDA_CHAIN_CONFIG.rpc,
-        rest: process.env.NEXT_PUBLIC_CHAIN_REST || ANDROMEDA_CHAIN_CONFIG.rest,
+        rpc: ENV.RPC_URL,
+        rest: ENV.CHAIN_REST,
       });
       
       // Now enable after suggesting

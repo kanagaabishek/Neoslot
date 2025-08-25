@@ -10,10 +10,11 @@ import NetworkStatus from '../components/NetworkStatus';
 import DebugPanel from '../components/DebugPanel';
 import MarketplaceViewer from '../components/MarketplaceViewer';
 import { useWallet } from '../hooks/useWallet';
+import ENV from '../utils/env';
 
-// Environment variables
-const cw721 = process.env.NEXT_PUBLIC_CW721_ADDRESS!;
-const marketplace = process.env.NEXT_PUBLIC_MARKETPLACE_ADDRESS!;
+// Contract addresses from environment
+const cw721 = ENV.CW721_ADDRESS;
+const marketplace = ENV.MARKETPLACE_ADDRESS;
 
 interface NFTMetadata {
   name: string;
@@ -87,6 +88,34 @@ export default function MintPage() {
     setAttributes(updated);
   };
 
+  const checkMintPermissions = async () => {
+    if (!isConnected || typeof window === 'undefined') return;
+
+    try {
+      addDebugLog("🔍 Checking mint permissions...");
+      const rpc = ENV.CHAIN_RPC;
+      const { CosmWasmClient } = await import("@cosmjs/cosmwasm-stargate");
+      const client = await CosmWasmClient.connect(rpc);
+      
+      // Get minter info
+      const minter = await client.queryContractSmart(cw721, { minter: {} });
+      addDebugLog(`Contract minter: ${minter}`);
+      addDebugLog(`Your address: ${address}`);
+      
+      if (minter !== address) {
+        setError(`❌ MINT PERMISSION ERROR: This CW721 contract only allows minting by the minter address: ${minter}. Your address (${address}) does not have mint permissions. You need to either:\n1. Use a different CW721 contract that allows public minting\n2. Contact the contract owner to add you as a minter\n3. Use the minter address to mint NFTs`);
+        return false;
+      }
+      
+      addDebugLog("✅ You have mint permissions!");
+      return true;
+      
+    } catch (err) {
+      addDebugLog(`Error checking permissions: ${err}`);
+      return false;
+    }
+  };
+
   const mintNFTOnly = async () => {
     if (!isConnected || typeof window === 'undefined') {
       setError("Please connect your wallet first");
@@ -98,16 +127,22 @@ export default function MintPage() {
       return;
     }
 
+    // Check mint permissions first
+    const hasPermissions = await checkMintPermissions();
+    if (!hasPermissions) {
+      return; // Error already set by checkMintPermissions
+    }
+
     try {
       setLoading(true);
       setError("");
       setSuccess("");
       clearDebugLogs();
 
-      const rpc = process.env.NEXT_PUBLIC_CHAIN_RPC!;
+      const rpc = ENV.CHAIN_RPC;
       
       addDebugLog("Starting MINT-ONLY process...");
-      addDebugLog(`Environment: RPC=${rpc}, Chain=${process.env.NEXT_PUBLIC_CHAIN_ID}`);
+      addDebugLog(`Environment: RPC=${rpc}, Chain=${ENV.CHAIN_ID}`);
       
       addDebugLog("Setting up Keplr chain...");
       const offlineSigner = await setupKeplrChain();
@@ -174,16 +209,22 @@ export default function MintPage() {
       return;
     }
 
+    // Check mint permissions first
+    const hasPermissions = await checkMintPermissions();
+    if (!hasPermissions) {
+      return; // Error already set by checkMintPermissions
+    }
+
     try {
       setLoading(true);
       setError("");
       setSuccess("");
       clearDebugLogs();
 
-      const rpc = process.env.NEXT_PUBLIC_CHAIN_RPC!;
+      const rpc = ENV.CHAIN_RPC;
       
-      console.log("Environment check:", { rpc, chainId: process.env.NEXT_PUBLIC_CHAIN_ID, cw721, marketplace });
-      addDebugLog(`Environment check: RPC=${rpc}, Chain=${process.env.NEXT_PUBLIC_CHAIN_ID}`);
+      console.log("Environment check:", { rpc, chainId: ENV.CHAIN_ID, cw721, marketplace });
+      addDebugLog(`Environment check: RPC=${rpc}, Chain=${ENV.CHAIN_ID}`);
       addDebugLog(`Contracts: CW721=${cw721}, Marketplace=${marketplace}`);
       
       // Check network connectivity first
@@ -476,7 +517,23 @@ export default function MintPage() {
 
           {/* Network Status */}
           <div className="mb-4">
-            <NetworkStatus rpcUrl={process.env.NEXT_PUBLIC_CHAIN_RPC!} />
+            <NetworkStatus rpcUrl={ENV.CHAIN_RPC} />
+          </div>
+
+          {/* Contract Status Warning */}
+          <div className="mb-6 p-4 bg-amber-50 border border-amber-200 rounded-lg">
+            <h3 className="font-medium text-amber-900 mb-2">⚠️ Contract Permissions Notice</h3>
+            <p className="text-amber-800 text-sm mb-2">
+              This CW721 contract has restricted minting permissions. Only the minter address can create new NFTs.
+            </p>
+            <div className="text-xs text-amber-700 space-y-1">
+              <div><strong>Contract:</strong> {cw721}</div>
+              <div><strong>Authorized Minter:</strong> andr1jy34d6caqk6ywf7ewcvptdugw3uuu0jkeumfg</div>
+              <div><strong>Your Address:</strong> {address || 'Not connected'}</div>
+            </div>
+            <p className="text-amber-800 text-sm mt-2">
+              💡 If you get an "Unauthorized" error, it means your wallet doesn't have mint permissions on this contract.
+            </p>
           </div>
 
           {error && (
@@ -659,6 +716,18 @@ export default function MintPage() {
                   </button>
                 </div>
               </form>
+
+              {/* Permission Check Button */}
+              <div className="mb-6">
+                <button
+                  type="button"
+                  onClick={checkMintPermissions}
+                  disabled={loading}
+                  className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed text-sm font-medium"
+                >
+                  🔍 Check My Mint Permissions
+                </button>
+              </div>
             </div>
           )}
         </div>
